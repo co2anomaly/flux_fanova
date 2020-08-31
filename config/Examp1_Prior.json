@@ -1,0 +1,56 @@
+{
+  "prior": {
+    "mean": {
+      "gp_stddev": {"form":"halfnormal", "stddev": 4.0},
+      "gp_range": {"form":"lognormal", "mean": 0.7, "stddev": 1.0},
+      "gp_smoothness": {"form":"lognormal", "mean": 0.25, "stddev": 0.25}
+    },
+    "mainA": {          
+      "gp_stddev": {"form":"halfnormal", "stddev": 4.0},
+      "gp_range": {"form":"lognormal", "mean": 0.7, "stddev": 1.0},
+      "gp_smoothness": {"form":"lognormal", "mean": 0.25, "stddev": 0.25}
+    },
+    "mainB": {          
+      "gp_stddev": {"form":"halfnormal", "stddev": 4.0},
+      "gp_range": {"form":"lognormal", "mean": 0.7, "stddev": 1.0},
+      "gp_smoothness": {"form":"lognormal", "mean": 0.25, "stddev": 0.25}
+    },
+    "interact": {          
+      "gp_stddev": {"form":"halfnormal", "stddev": 4.0},
+      "gp_range": {"form":"lognormal", "mean": 0.7, "stddev": 1.0},
+      "gp_smoothness": {"form":"lognormal", "mean": 0.25, "stddev": 0.25}
+    },
+    "noise": {          
+      "gp_stddev": {"form":"halfnormal", "stddev": 2.0},
+      "gp_range": {"form":"lognormal", "mean": 0.7, "stddev": 1.0},
+      "gp_smoothness": {"form":"lognormal", "mean": 0.25, "stddev": 0.25}
+    }
+  },
+  "mh": {
+    "mean": {
+      "stddev": 0.24,
+      "sdvec": [0.9, 1.0, 0.4],
+      "corvec": [1.0, 0.7, -0.3, 0.7, 1, -0.7, -0.3, -0.7, 1]
+    },      
+    "mainA": {
+      "stddev": 0.24,
+      "sdvec": [0.9, 1.0, 0.4],
+      "corvec": [1.0, 0.7, -0.3, 0.7, 1, -0.7, -0.3, -0.7, 1]
+    },      
+    "mainB": {
+      "stddev": 0.24,
+      "sdvec": [0.9, 1.0, 0.4],
+      "corvec": [1.0, 0.7, -0.3, 0.7, 1, -0.7, -0.3, -0.7, 1]
+    },      
+    "interact": {
+      "stddev": 0.27,
+      "sdvec": [0.9, 1.0, 0.4],
+      "corvec": [1.0, 0.7, -0.3, 0.7, 1, -0.7, -0.3, -0.7, 1]
+    },      
+    "noise": {
+      "stddev": 0.08,
+      "sdvec": [0.6, 1.0, 0.6],
+      "corvec": [1.0, 0.7, -0.3, 0.7, 1, -0.7, -0.3, -0.7, 1]
+    }      
+  }
+}
