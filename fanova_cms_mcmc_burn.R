@@ -1,0 +1,386 @@
+
+# Read fluxes and perform MCMC burn-in
+# Multi-dimensional MH updates for GP parameters 
+# Expected command line arguments
+#    config: CSV file with MCMC info
+#    chain:  Chain number
+
+library(fields)
+library(ncdf4)
+library(jsonlite)
+source("func_anova_fns.R")
+
+args=(commandArgs(TRUE))
+
+config = args[1]
+chain = as.integer(args[2])
+ptxt = sprintf("Config: %s, Chain %d",config,chain)
+print(ptxt)
+
+# Read configuration
+exmpcfg = read.csv(config,header = TRUE,stringsAsFactors = FALSE)
+cfglst = as.list(exmpcfg$Value)
+names(cfglst) = exmpcfg$Field
+
+prinfo = fromJSON(txt = cfglst$json_file)
+
+nchain = as.integer(cfglst$nchain)
+niter = as.integer(cfglst$nburn)
+nthin = as.integer(cfglst$nthin)
+nsamp = floor(niter / nthin)
+nadapt = as.integer(cfglst$burn_mh_adapt)
+nmhsv = floor(niter / nadapt)
+sadapt = as.integer(cfglst$save_adapt)
+
+insd = as.integer(cfglst$burn_seed) + chain*as.integer(cfglst$burn_inc)
+set.seed(insd)
+nloc = as.integer(cfglst$nloc)
+nmnA = as.integer(cfglst$nleva)
+nmnB = as.integer(cfglst$nlevb)
+nab = (nmnA-1) * (nmnB-1)
+nrp = as.integer(cfglst$nrep)
+
+ctxt = sprintf("Configuration parsed. Factor A has %d levels. Factor B has %d levels. %d replicates\n",nmnA,nmnB,nrp)
+print(ctxt)
+
+lgfl = paste0(cfglst$burn_log_file,chain,".txt")
+write(ptxt,file=lgfl)
+write(ctxt,file=lgfl,append=TRUE)
+
+# Read data and locations
+nc1 = nc_open(cfglst$data_file)
+dtarr = ncvar_get(nc1,cfglst$data_variable)
+ctrstA = as.vector(ncvar_get(nc1,"contrast_A"))
+ctrstB = as.vector(ncvar_get(nc1,"contrast_B"))
+locx = ncvar_get(nc1,cfglst$location_x_name)
+locy = ncvar_get(nc1,cfglst$location_y_name)
+nc_close(nc1)
+
+locs=as.matrix(cbind(locx,locy))
+
+if ((cfglst$great_circ == "yes") || (cfglst$great_circ == "Yes")) {
+    dstmt = rdist.earth(locs,miles = FALSE)
+} else {
+    dstmt = rdist(locs)
+}
+    
+ctxt = "Data and locations read"
+print(ctxt)
+write(ctxt,file=lgfl,append=TRUE)
+mdtxt = sprintf("Median distance: %.3e",median(as.vector(dstmt)))
+write(mdtxt,file=lgfl,append=TRUE)
+
+
+# covariance params, setup default values
+rnglst = list(mean = 4, mainA = 3, mainB = 3, interact = 2, noise = 1)
+siglst = list(mean = 2, mainA = 1.5, mainB = 1.5, interact = 1, noise = 0.5)
+nulst = list(mean = 1.5, mainA = 1.5, mainB = 1.5, interact = 1.5, noise = 1.5)
+gpgrps = c("mean","mainA","mainB","interact","noise")
+gpvnms = c("gp_stddev","gp_range","gp_smoothness")
+
+# Read in inital values
+ncinit = paste0(cfglst$burn_init_file,chain,".nc")
+nc1 = nc_open(ncinit)
+for (g1 in seq(1,length(gpgrps))) {
+  sgnm = paste0("gp_stddev_",gpgrps[g1])
+  siglst[[gpgrps[g1]]] = ncvar_get(nc1,sgnm)
+  lmnm = paste0("gp_range_",gpgrps[g1])
+  rnglst[[gpgrps[g1]]] = ncvar_get(nc1,lmnm)
+  nunm = paste0("gp_smoothness_",gpgrps[g1])
+  nulst[[gpgrps[g1]]] = ncvar_get(nc1,nunm)
+}
+mu.cur = as.vector(ncvar_get(nc1,"gp_field_mean"))
+a.cur = as.vector(ncvar_get(nc1,"gp_field_mainA"))
+b.cur = as.vector(ncvar_get(nc1,"gp_field_mainB"))
+ab.cur = as.vector(ncvar_get(nc1,"gp_field_interact"))
+nc_close(nc1)
+
+
+print(siglst)
+
+
+
+# Output arrays
+#I=J=2
+mu.samp=a.samp=b.samp=ab.samp=array(dim=c(sadapt,nloc))
+sig.samp=list(mean = rep(0,sadapt), mainA = rep(0,sadapt), mainB = rep(0,sadapt), interact = rep(0,sadapt), noise = rep(0,sadapt))
+lam.samp=list(mean = rep(0,sadapt), mainA = rep(0,sadapt), mainB = rep(0,sadapt), interact = rep(0,sadapt), noise = rep(0,sadapt))
+nu.samp=list(mean = rep(0,sadapt), mainA = rep(0,sadapt), mainB = rep(0,sadapt), interact = rep(0,sadapt), noise = rep(0,sadapt))
+mncr = array(0,c(nloc,nmnA,nmnB))
+
+Cor.mu = Matern(dstmt,range=rnglst$mean[1],smoothness=nulst$mean[1])
+Cor.mu.eig = eigen(Cor.mu,symmetric = TRUE,only.values = TRUE)
+Cor.a = Matern(dstmt,range=rnglst$mainA[1],smoothness=nulst$mainA[1])
+Cor.a.eig = eigen(Cor.a,symmetric = TRUE,only.values = TRUE)
+Cor.b = Matern(dstmt,range=rnglst$mainB[1],smoothness=nulst$mainB[1])
+Cor.b.eig = eigen(Cor.b,symmetric = TRUE,only.values = TRUE)
+Cor.ab = Matern(dstmt,range=rnglst$interact[1],smoothness=nulst$interact[1])
+Cor.ab.eig = eigen(Cor.ab,symmetric = TRUE,only.values = TRUE)
+Cor.eps = Matern(dstmt,range=rnglst$noise[1],smoothness=nulst$noise[1])
+Cor.eps.eig = eigen(Cor.eps,symmetric = TRUE,only.values = TRUE)
+cordetlst = list(mean = sum(log(Cor.mu.eig$values)), mainA = sum(log(Cor.a.eig$values)), 
+                 mainB = sum(log(Cor.b.eig$values)), interact = sum(log(Cor.ab.eig$values)), 
+                 noise = sum(log(Cor.eps.eig$values)))
+
+Rinv.mu = solve(Cor.mu)
+Rinv.a = solve(Cor.a)
+Rinv.b = solve(Cor.a)
+Rinv.ab = solve(Cor.ab)
+Rinv.eps = solve(Cor.eps)
+
+C.mu=(siglst$mean[1])^2*Cor.mu
+C.a=(siglst$mainA[1])^2*Cor.a
+C.b=(siglst$mainB[1])^2*Cor.b
+C.ab=(siglst$interact[1])^2*Cor.ab
+C.eps=(siglst$noise[1])^2*Cor.eps
+
+# Metropolis-Hastings setup
+ac_mh = list(mean = 0, mainA = 0, mainB = 0, interact = 0, noise = 0)
+acrt_mh = list(mean = 0, mainA = 0, mainB = 0, interact = 0, noise = 0)
+jpsd_mh = list(mean = 1.0, mainA = 1.0, mainB = 1.0, interact = 1.0, noise = 1.0)
+for (g1 in seq(1,length(gpgrps))) {
+    jpsd_mh[[gpgrps[g1] ]] = prinfo$mh[[ gpgrps[g1] ]][["stddev"]]
+}
+
+mhcor3d = matrix(c(1,0.6,-0.4, 0.6,1,-0.8, -0.4,-0.8,1),nrow=3)
+mhsd3d = diag(c(0.6,1.0,0.6))
+mhcv3d = mhsd3d %*% mhcor3d %*% mhsd3d
+mhchl3d = t(chol(mhcv3d))
+
+# Optional refinement of MH proposal
+chol_mh = list(mean = mhchl3d, mainA = mhchl3d, mainB = mhchl3d,
+               interact = mhchl3d, noise = mhchl3d) 
+for (g1 in seq(1,length(gpgrps))) {
+    mhcor3d = matrix(prinfo$mh[[ gpgrps[g1] ]][["corvec"]],nrow=3)
+    mhsd3d = diag( prinfo$mh[[ gpgrps[g1] ]][["sdvec"]]  )
+    mhcv3d = mhsd3d %*% mhcor3d %*% mhsd3d
+    chol_mh[[gpgrps[g1] ]] =  t(chol(mhcv3d))
+}
+
+# Sampling file
+ncsmpl = paste0(cfglst$burn_samp_file,chain,".nc")
+
+# Priors, from JSON
+mu0 = 0
+prpars = c(0.7,1.0)
+prnu = c(0.25,0.25)
+pr_gp_sig = list(mean = 1.0, mainA = 1.0, mainB = 1.0, interact = 1.0, noise = 1.0)
+pr_gp_lam = list(mean = prpars, mainA = prpars, mainB = prpars, interact = prpars, noise = prpars)
+pr_gp_nu = list(mean = prnu, mainA = prnu, mainB = prnu, interact = prnu, noise = prnu)
+for (g1 in seq(1,length(gpgrps))) {
+    pr_gp_sig[[gpgrps[g1] ]] = prinfo$prior[[ gpgrps[g1]]][["gp_stddev"]][["stddev"]]
+    pr_gp_lam[[gpgrps[g1] ]] = c(prinfo$prior[[ gpgrps[g1]]][["gp_range"]][["mean"]],
+                                 prinfo$prior[[ gpgrps[g1]]][["gp_range"]][["stddev"]])
+    pr_gp_nu[[gpgrps[g1] ]] = c(prinfo$prior[[ gpgrps[g1]]][["gp_smoothness"]][["mean"]],
+                                prinfo$prior[[ gpgrps[g1]]][["gp_smoothness"]][["stddev"]])
+}
+
+
+# Bookkeeping
+saveidx = 0
+aidx = 0
+
+for(l in 1:niter){
+  
+  C.mu=(siglst$mean[1])^2*Cor.mu
+  C.a=(siglst$mainA[1])^2*Cor.a
+  C.b=(siglst$mainB[1])^2*Cor.b
+  C.ab=(siglst$interact[1])^2*Cor.ab
+  C.eps=(siglst$noise[1])^2*Cor.eps
+  
+  # Thinning/output
+  if ( (l %% nthin) == 0) {
+    print(l)
+      save = 1
+      sct = (saveidx %% sadapt) + 1
+      saveidx = saveidx + 1
+  }
+  else {
+      save = 0
+  }
+  if ( (l %% nadapt) == 0 ) {
+      # MH Update
+      aidx = aidx + 1
+      gpgrps = c("mean","mainA","mainB","interact","noise")
+      for (g1 in seq(1,length(gpgrps))) {
+          acrt_mh[[gpgrps[g1] ]] = 1.0 * ac_mh[[gpgrps[g1] ]] / nadapt
+
+          # Output result
+          ncmh = nc_open(ncsmpl,write = TRUE)
+          sdnm = paste0("mh_stddev_",gpgrps[g1])
+          ncvar_put(ncmh,sdnm,jpsd_mh[[gpgrps[g1] ]],start = aidx,count=1)
+          rtnm = paste0("mh_acc_rate_",gpgrps[g1])
+          ncvar_put(ncmh,rtnm,acrt_mh[[gpgrps[g1] ]],start = aidx,count=1)
+          nc_close(ncmh)
+          
+          # Update
+          jpsd_mh[[gpgrps[g1] ]] = rand_mh_rate(acrt_mh[[gpgrps[g1] ]], jpsd_mh[[gpgrps[g1] ]])
+          ac_mh[[gpgrps[g1] ]] = 0
+      }  
+        
+      # Logging
+      ctxt = sprintf("\nIteration %d\n  Acc Rate Mean: %.4f, Noise: %.4f",
+                     l,acrt_mh$mean,acrt_mh$noise)
+      write(ctxt,file=lgfl,append=TRUE)
+      
+  }
+  
+  ### State/parameter updates
+  ### Use previously computed inverse correlation matrices where possible
+  ### Posterior mean, Cholesky of posterior covariance still needed
+  
+  ## update mu
+  pprec = Rinv.mu / (siglst$mean[1]^2) + (nmnA*nmnB*nrp) * Rinv.eps / (siglst$noise[1]^2)
+  y.tilde = apply(dtarr,1,sum) - (nmnA*nmnB*nrp)*mu0
+  xty = (Rinv.eps / (siglst$noise[1]^2)) %*% y.tilde
+  pmean=solve(pprec,xty)
+  mu.cur = pmean + t(chol(solve(pprec)))%*%rnorm(nloc)
+  
+  ## update alpha
+  pprec = Rinv.a / (siglst$mainA[1]^2) + (nmnA*nmnB*nrp) * Rinv.eps / (siglst$noise[1]^2)
+  y.tilde = ctrstA[1]*apply(dtarr[,1,,],1,sum) + ctrstA[2]*apply(dtarr[,2,,],1,sum)
+  xty = (Rinv.eps / (siglst$noise[1]^2)) %*% y.tilde
+  pmean=solve(pprec,xty)
+  a.cur = pmean + t(chol(solve(pprec)))%*%rnorm(nloc)
+  
+  ## update beta
+  pprec = Rinv.b / (siglst$mainB[1]^2) + (nmnA*nmnB*nrp) * Rinv.eps / (siglst$noise[1]^2)
+  y.tilde = ctrstB[1]*apply(dtarr[,,1,],1,sum) + ctrstB[2]*apply(dtarr[,,2,],1,sum)
+  xty = (Rinv.eps / (siglst$noise[1]^2)) %*% y.tilde
+  pmean=solve(pprec,xty)
+  b.cur = pmean + t(chol(solve(pprec)))%*%rnorm(nloc)
+  
+  ## update ab
+  pprec = Rinv.ab / (siglst$interact[1]^2) + (nmnA*nmnB*nrp) * Rinv.eps / (siglst$noise[1]^2)
+  y.tilde=rep(0,nloc)
+  for(i in 1:nmnA){ for(j in 1:nmnB){
+    y.tilde = y.tilde + ctrstA[i]*ctrstB[j]*apply(dtarr[,i,j,],1,sum)
+  }}
+  xty = (Rinv.eps / (siglst$noise[1]^2)) %*% y.tilde
+  pmean=solve(pprec,xty)
+  ab.cur = pmean + t(chol(solve(pprec)))%*%rnorm(nloc)
+
+  ## Epsilon cov params
+  # mu + ic[i]*alpha + jc[j]*beta + ic[i]*jc[j]*ab
+  ydv = array(0,c(nloc,nrp*nmnA*nmnB))
+  ct0 = 0
+  for(i in 1:nmnA) { 
+    for(j in 1:nmnB) {
+      mncr[,i,j] = mu.cur + ctrstA[i]*a.cur + ctrstB[j]*b.cur + ctrstA[i]*ctrstB[j]*ab.cur   
+      for (k in 1:nrp) {
+        ct0 = ct0 + 1
+        ydv[,ct0] = dtarr[,i,j,k] - mncr[,i,j]
+      }
+    }
+  }
+  
+  epsmh = spatial_mh3d_matern(siglst$noise,rnglst$noise,nulst$noise,Rinv.eps,Cor.eps,cordetlst$noise,ydv,
+                              ct0,nloc,dstmt,jpsd_mh$noise,chol_mh$noise,pr_gp_sig$noise,pr_gp_lam$noise,pr_gp_nu$noise) 
+  ac_mh$noise = ac_mh$noise + epsmh$acpt
+  siglst$noise[1] = epsmh$sdpst
+  rnglst$noise[1] = epsmh$lampst
+  nulst$noise[1] = epsmh$nupst
+  Cor.eps = epsmh$CorMat
+  Rinv.eps = epsmh$CorPrc
+  cordetlst$noise = epsmh$lgdetcor
+  
+  abmh = spatial_mh3d_matern(siglst$interact,rnglst$interac,nulst$interac,Rinv.ab,Cor.ab,cordetlst$interac,ab.cur,
+                             nab,nloc,dstmt,jpsd_mh$interact,chol_mh$interact,
+                             pr_gp_sig$interact,pr_gp_lam$interact,pr_gp_nu$interact) 
+  ac_mh$interact = ac_mh$interac + abmh$acpt
+  siglst$interact[1] = abmh$sdpst
+  rnglst$interact[1] = abmh$lampst
+  nulst$interact[1] = abmh$nupst
+  Cor.ab = abmh$CorMat
+  Rinv.ab = abmh$CorPrc
+  cordetlst$interact = abmh$lgdetcor
+  
+  amh = spatial_mh3d_matern(siglst$mainA,rnglst$mainA,nulst$mainA,Rinv.a,Cor.a,cordetlst$mainA,a.cur,
+                            nmnA-1,nloc,dstmt,jpsd_mh$mainA,chol_mh$mainA,
+                            pr_gp_sig$mainA,pr_gp_lam$mainA,pr_gp_nu$mainA) 
+  ac_mh$mainA = ac_mh$mainA + amh$acpt
+  siglst$mainA[1] = amh$sdpst
+  rnglst$mainA[1] = amh$lampst
+  nulst$mainA[1] = amh$nupst
+  Cor.a = amh$CorMat
+  Rinv.a = amh$CorPrc
+  cordetlst$mainA = amh$lgdetcor
+  
+  bmh = spatial_mh3d_matern(siglst$mainB,rnglst$mainB,nulst$mainB,Rinv.b,Cor.b,cordetlst$mainB,b.cur,
+                            nmnB-1,nloc,dstmt,jpsd_mh$mainB,chol_mh$mainB,
+                            pr_gp_sig$mainB,pr_gp_lam$mainB,pr_gp_nu$mainB) 
+  ac_mh$mainB = ac_mh$mainB + bmh$acpt
+  siglst$mainB[1] = bmh$sdpst
+  rnglst$mainB[1] = bmh$lampst
+  nulst$mainB[1] = bmh$nupst
+  Cor.b = bmh$CorMat
+  Rinv.b = bmh$CorPrc
+  cordetlst$mainB = bmh$lgdetcor
+  
+  mumh = spatial_mh3d_matern(siglst$mean,rnglst$mean,nulst$mean,Rinv.mu,Cor.mu,cordetlst$mean,mu.cur,
+                             1,nloc,dstmt,jpsd_mh$mean,chol_mh$mean,
+                             pr_gp_sig$mean,pr_gp_lam$mean,pr_gp_nu$mean) 
+  ac_mh$mean = ac_mh$mean + mumh$acpt
+  siglst$mean[1] = mumh$sdpst
+  rnglst$mean[1] = mumh$lampst
+  nulst$mean[1] = mumh$nupst
+  Cor.mu = mumh$CorMat
+  Rinv.mu = mumh$CorPrc
+  cordetlst$mean = mumh$lgdetcor
+  
+  # Save/store output
+  if (save == 1) {
+    for (g1 in seq(1,length(gpgrps))) {
+        sig.samp[[gpgrps[g1] ]][sct] = siglst[[gpgrps[g1] ]]
+        lam.samp[[gpgrps[g1] ]][sct] = rnglst[[gpgrps[g1] ]]
+        nu.samp[[gpgrps[g1] ]][sct] = nulst[[gpgrps[g1] ]]
+    }
+    mu.samp[sct,] = mu.cur
+    a.samp[sct,] = a.cur
+    b.samp[sct,] = b.cur
+    ab.samp[sct,] = ab.cur
+    if ( (saveidx %% sadapt) == 0) {
+        ftxt = sprintf('Saving: saveidx %d, sct %d',saveidx,sct) 
+        print(ftxt)
+        # Write output
+        ast = saveidx + 1 - sadapt
+        nc1 = nc_open(ncsmpl,write=TRUE)
+        for (g1 in seq(1,length(gpgrps))) {
+          sgnm = paste0("gp_stddev_",gpgrps[g1])
+          ncvar_put(nc1,sgnm,sig.samp[[gpgrps[g1]]],start = c(ast),count=c(sadapt))
+          lmnm = paste0("gp_range_",gpgrps[g1])
+          ncvar_put(nc1,lmnm,lam.samp[[gpgrps[g1]]],start = c(ast),count=c(sadapt))
+          nunm = paste0("gp_smoothness_",gpgrps[g1])
+          ncvar_put(nc1,nunm,nu.samp[[gpgrps[g1]]],start = c(ast),count=c(sadapt))
+        }
+        ncvar_put(nc1,"gp_field_mean",mu.samp,start = c(ast,1),count=c(sadapt,nloc))
+        ncvar_put(nc1,"gp_field_mainA",a.samp,start = c(ast,1,1),count=c(sadapt,nloc,nmnA-1))
+        ncvar_put(nc1,"gp_field_mainB",b.samp,start = c(ast,1,1),count=c(sadapt,nloc,nmnB-1))
+        ncvar_put(nc1,"gp_field_interact",ab.samp,start = c(ast,1,1),count=c(sadapt,nloc,nab))
+        nc_close(nc1)
+    }
+  }
+}
+
+# Save final states
+ctxt = "Saving final states"
+print(ctxt)
+write(ctxt,file=lgfl,append=TRUE)
+
+ncfnl = paste0(cfglst$burn_final_file,chain,".nc")
+nc1 = nc_open(ncfnl,write=TRUE)
+for (g1 in seq(1,length(gpgrps))) {
+  sgnm = paste0("gp_stddev_",gpgrps[g1])
+  ncvar_put(nc1,sgnm,siglst[[gpgrps[g1]]])
+  lmnm = paste0("gp_range_",gpgrps[g1])
+  ncvar_put(nc1,lmnm,rnglst[[gpgrps[g1]]])
+  nunm = paste0("gp_smoothness_",gpgrps[g1])
+  ncvar_put(nc1,nunm,nulst[[gpgrps[g1]]])
+}
+ncvar_put(nc1,"gp_field_mean",mu.cur)
+ncvar_put(nc1,"gp_field_mainA",a.cur)
+ncvar_put(nc1,"gp_field_mainB",b.cur)
+ncvar_put(nc1,"gp_field_interact",ab.cur)
+nc_close(nc1)
+
+
