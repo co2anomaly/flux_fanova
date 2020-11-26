@@ -1,3 +1,3 @@
 ### Visualization
 
-Scripts for visualization of flux datasets.
+Scripts for visualization of MEaSUREs and flux datasets.
