@@ -51,6 +51,60 @@ spat_anova_sim_2fact = function(flddim,nlev,nrep, sp_range, sp_stddv) {
   return(frmout)
 }
 
+spat_anova_sim_2fact_mltlev = function(flddim,nlev,nrep, ctrlst, sp_range, sp_stddv, sp_smooth) {
+  # Simulation of random fields from ANOVA model with two factors, multiple levels
+  #     flddim    - 2 dimensions, x and y grid sizes
+  #     nlev      - 2 dimensions, number of levels for each factor
+  #     nrep      - number of replicates for each level
+  #     ctrlst    - list of contrast matrices (2 elements)
+  #     sp_range  - list of spatial range parameters for ANOVA fields
+  #     sp_stddv  - list of spatial standard deviations for ANOVA fields
+  #     sp_smooth - list of Matern smoothness parameters for ANOVA fields
+  
+  #     Covariance parameter lists have elements:
+  #     mean, mainA, mainB, interac, noise
+  
+  xsq = seq(1,flddim[1])
+  ysq = seq(1,flddim[2])
+  locs=as.matrix(expand.grid(xsq,ysq))
+  n = nrow(locs)
+  dstmt = rdist(locs)
+  nab = (nlev[1]-1) * (nlev[2]-1)
+  I = nlev[1]
+  J = nlev[2]
+  
+  C.mu=(sp_stddv$mean[1])^2*Matern(dstmt,range=sp_range$mean[1],smoothness=sp_smooth$mean[1])
+  C.a=(sp_stddv$mainA[1])^2*Matern(dstmt,range=sp_range$mainA[1],smoothness=sp_smooth$mainA[1])
+  C.b=(sp_stddv$mainB[1])^2*Matern(dstmt,range=sp_range$mainB[1],smoothness=sp_smooth$mainB[1])
+  C.ab=(sp_stddv$interac[1])^2*Matern(dstmt,range=sp_range$interac[1],smoothness=sp_smooth$interac[1])
+  C.eps=(sp_stddv$noise[1])^2*Matern(dstmt,range=sp_range$noise[1],smoothness=sp_smooth$noise[1])
+  
+  mu=t(chol(C.mu))%*%rnorm(n)
+  alpha=t(chol(C.a))%*%  matrix(rnorm(n*(I-1)), nrow=n, ncol=I-1 )
+  beta=t(chol(C.b))%*% matrix(rnorm(n*(J-1)), nrow=n, ncol=J-1 )
+  ab=t(chol(C.ab))%*% matrix(rnorm(n*nab), nrow=n, ncol=nab )
+  
+  print(dim(alpha))
+  ctra = ctrlst[[1]]
+  ctrb = ctrlst[[2]]
+  ### simulate data
+  print(dim(ctra))
+  y=array(dim=c(n,nlev[1],nlev[2],nrep))
+  for(i in 1:I){
+    for(j in 1:J){
+      ictrst = ctra[i,] %x% ctrb[j,]
+      for(k in 1:nrep){
+        eps=t(chol(C.eps))%*%rnorm(n)
+        y[,i,j,k] = mu + alpha %*% as.vector(ctra[i,]) + beta %*% as.vector(ctrb[j,]) + ab %*% as.vector(ictrst) + eps
+      }
+    }
+  }
+  
+  frmout = list(dists=dstmt, datarr=y, locfrm=locs, 
+                mu=mu, alpha=alpha, beta=beta, ab=ab)
+  return(frmout)
+}
+
 spatial_mh_std_dev = function(cursd,datarr,nflds,nloc,corprc,mhsd,prsd) {
   # Spatial covariance standard deviation update
   # Metropolis-Hastings update of log std dev
@@ -423,6 +477,45 @@ fit_anova_arr3d = function(datmat, contrstA, contrstB) {
     return(l1$coefficients)
 }
 
+fit_anova_mltlev_arr3d = function(datmat, contrstA, contrstB) {
+    # Quick ANOVA estimate for multi-level factors
+    # Data are organized as a 3D array (factA, factB, replicate)
+  
+    if (is.na(ncol(contrstA))) {
+        contrstA = matrix(contrstA,ncol=1)
+    }
+    if (is.na(ncol(contrstB))) {
+        contrstB = matrix(contrstB,ncol=1)
+    }
+   
+    amlt = melt(contrstA, varnames=c("LevA","CtrstA"), value.name="CfA")
+    afrm = dcast(amlt,LevA ~ CtrstA,value.var = "CfA")
+    asq = seq(2,ncol(afrm))
+    names(afrm)[asq] = paste("A",names(afrm)[asq],sep="_")
+    bmlt = melt(contrstB, varnames=c("LevB","CtrstB"), value.name="CfB")
+    bfrm = dcast(bmlt,LevB ~ CtrstB,value.var = "CfB")
+    bsq = seq(2,ncol(bfrm))
+    names(bfrm)[bsq] = paste("B",names(bfrm)[bsq],sep="_")
+
+    ctrmrg = merge(amlt,bmlt,all = TRUE)
+    ctrmrg$Interact = ctrmrg$CfA * ctrmrg$CfB
+
+    ctrcst = dcast(ctrmrg,LevA + LevB ~ CtrstA + CtrstB, value.var="Interact")
+    isq = seq(3,ncol(ctrcst))
+    names(ctrcst)[isq] = paste("AB",names(ctrcst)[isq],sep="_") 
+
+    mltfrm = melt(datmat,varnames=c("LevA","LevB","Rep"))
+    mltmrg = merge(mltfrm,afrm)
+    mltmrg = merge(mltmrg,bfrm)
+    mltmrg = merge(mltmrg,ctrcst)
+
+    csq = seq(5,ncol(mltmrg))
+    l1 = lm(mltmrg$value ~ as.matrix(mltmrg[,csq])) 
+    cfout = l1$coefficients
+    names(cfout) = c("Intercept",names(mltmrg)[csq])
+    return(cfout)
+}
+
 # Trace plots
 gp_partrace_burn = function(vrfm,cflst,pltthm,nstrt=51) {
     # Trace plot for GP parameters (stddev, range, smoothness)
@@ -544,10 +637,16 @@ gp_fldtrace_burn = function(vrfm,cflst,pltthm,nstrt=51) {
   xstr = sprintf(sprstr,locx[lcsq])
   ystr = sprintf(sprstr,locy[lcsq])
   lcstrs = paste0("Location (",xstr,",",ystr,")")
+  lcshrt = paste0("(",xstr,",",ystr,")")
   nlc = length(lcsq)
   
   tct = nsamp - nstrt + 1
-  parr = array(0,c(tct,nlc,nchain))
+  if (vrfm$nctrst <= 1) {
+      parr = array(0,c(tct,nlc,nchain))
+  }
+  else {
+      parr = array(0,c(tct,nlc,vrfm$nctrst,nchain))
+  }
   for (i in seq(1,nchain)) {
     ncsmpl = paste0(cfglst$burn_samp_file,i,".nc")
     nc1 = nc_open(ncsmpl)
@@ -556,25 +655,46 @@ gp_fldtrace_burn = function(vrfm,cflst,pltthm,nstrt=51) {
         if (vrfm$nctrst == 0) {
             parr[,j,i] = ncvar_get(nc1,fldnm,start=c(nstrt,lcsq[j]),count=c(tct,1))
         }
-        else {
+        else if (vrfm$nctrst == 1) {
             parr[,j,i] = ncvar_get(nc1,fldnm,start=c(nstrt,lcsq[j],1),count=c(tct,1,1))
+        }
+        else {
+            parr[,j,,i] = ncvar_get(nc1,fldnm,start=c(nstrt,lcsq[j],1),count=c(tct,1,vrfm$nctrst))
         }
     }
     nc_close(nc1)
   }
   dimnames(parr)[1] = list(seq(nstrt,nsamp))
-  dimnames(parr)[2] = list(lcstrs)
-  pmlt = melt(parr,varnames=c("Iteration","Location","Chain"))
-  pmlt$Chain = as.factor(pmlt$Chain)
   
-  tstr = paste("Burn-in Trace Field Locations\n",vrfm$vrnm)
-  gplt = ggplot(pmlt,aes(x=Iteration,y=value,group=Chain)) + 
-    facet_wrap( ~ Location,nrow=vrfm$nrow,scales="fixed") + 
-    geom_line(aes(color=Chain),size=0.3) + pltthm + ggtitle(tstr)
-  print(vrfm$ofile)
-  png(vrfm$ofile,width=vrfm$width,height=vrfm$height,res=150)
-  print(gplt)
-  dev.off()
+  print(dim(parr))
+  if (vrfm$nctrst <= 1) {
+    dimnames(parr)[2] = list(lcstrs)
+    pmlt = melt(parr,varnames=c("Iteration","Location","Chain"))
+    pmlt$Chain = as.factor(pmlt$Chain)
+  
+    tstr = paste("Burn-in Trace Field Locations\n",vrfm$vrnm)
+    gplt = ggplot(pmlt,aes(x=Iteration,y=value,group=Chain)) + 
+           facet_wrap( ~ Location,nrow=vrfm$nrow,scales="fixed") + 
+           geom_line(aes(color=Chain),size=0.3) + pltthm + ggtitle(tstr)
+    print(vrfm$ofile)
+    png(vrfm$ofile,width=vrfm$width,height=vrfm$height,res=150)
+    print(gplt)
+    dev.off()
+  }
+  else {
+    dimnames(parr)[2] = list(lcshrt)
+    pmlt = melt(parr,varnames=c("Iteration","Location","Contrast","Chain"))
+    pmlt$Chain = as.factor(pmlt$Chain)
+    
+    tstr = paste("Burn-in Trace Field Locations\n",vrfm$vrnm)
+    gplt = ggplot(pmlt,aes(x=Iteration,y=value,group=Chain)) + 
+      facet_grid(Location ~ Contrast,scales="fixed") + 
+      geom_line(aes(color=Chain),size=0.3) + pltthm + ggtitle(tstr)
+    print(vrfm$ofile)
+    png(vrfm$ofile,width=vrfm$width,height=vrfm$height,res=150)
+    print(gplt)
+    dev.off()
+  }
 }
 
 gp_fldtrace_post = function(vrfm,cflst,pltthm,nstrt = 1) {
@@ -821,3 +941,36 @@ cov_to_frm = function(cvmt, vrnms = NULL) {
   return(frmout)
 }
 
+gp_scale_helmert = function(ngrp) {
+  # Set up matrix of scaled Helmert contrasts, according to Kaufman and Sain
+  cmthlm = contr.helmert(ngrp)
+  
+  crw = ngrp * (ngrp + 1) / 2
+  ccl = ngrp - 1
+  
+  cmt = matrix(0,nrow=crw,ncol = ccl)
+  rhs = rep(0,crw)
+  
+  tct = 0
+  for (p in seq(1,ngrp)) {
+    for (q in seq(p,ngrp)) {
+      if (p == q) {
+        rhs[tct+1] = 1.0 - 1.0 / ngrp
+        cmt[tct+1,] = cmthlm[p,]^2
+      }
+      else {
+        rhs[tct+1] = -1.0 / ngrp
+        cmt[tct+1,] = cmthlm[p,] * cmthlm[q,]
+      }
+      tct = tct + 1
+    }
+  }
+  sclfs = sqrt(qr.solve(cmt,rhs))
+  
+  # Re-scale matrix
+  sclhmt = matrix(0,nrow=nrow(cmthlm),ncol=ncol(cmthlm))
+  for (j in seq(1,ccl)) {
+    sclhmt[,j] = sclfs[j] * cmthlm[,j]
+  }
+  return(sclhmt)
+}
