@@ -9,50 +9,31 @@ The functional ANOVA methodology is based on [Kaufman and Sain (2010)](https://d
 
 ***
 
-### Basic simulation
+### Examples
 
-1. Simulate data fields and output with `fanova_sim_data.R`
-2. Create burn-in sampling files with `fanova_sim_setup_burn.R`
-3. Generate initial states with `fanova_sim_geninit.R`
-4. Run burn-in for each chain with `fanova_sim_mcmc_burn.R`
-    - Run within R console/RStudio:  
-    `> config = 'fanova_example_config.csv'`  
-    `> chain = 1`  
-    `> system(paste("Rscript fanova_sim_mcmc_burn.R",config,chain))`
-    - Run in batch (remote/cluster):  
-    `Rscript fanova_sim_mcmc_burn.R fanova_example_config.csv 1`
-    - Repeat for desired number of chains (4 in example)
-5. Burn-in diagnostics with `fanova_sim_burn_diag.R`
-6. Run post burn-in sampling with `fanova_sim_mcmc_post.R`  
-Follow same convention as burn-in step
+Several examples of the functional ANOVA approach for carbon flux inversions are found in the `examples` directory
+
+* [CMS-Flux Eurasia](examples/cms_eurasia/README.md): CMS-Flux esimates over Eurasia for two years, using different aggregation methods
+* [MIP North America](examples/mip_namer/README.md): OCO-2 V9 flux model intercomparison project estimates over North America
+* [MIP Africa](examples/mip_africa/README.md): OCO-2 V9 flux model intercomparison project estimates over Africa
 
 ***
 
-### Multi-level simulation
+### Development build of GPvecchia
 
-This simulation allows for an arbitrary number of levels for each of two ANOVA factors. 
-Example configuration: `fanova_example_config_mltlev.csv`
+The spatial covariance routines use the [GPvecchia R package](https://github.com/katzfuss-group/GPvecchia)
 
-1. Simulate data fields and output with `fanova_sim_data_mltlev.R`
-2. Create burn-in sampling files with `fanova_sim_mltlev_setup_burn.R`
-3. Generate initial states with `fanova_sim_mltlev_geninit.R`
+The internal matrix operations in the CRAN version of GPvecchia can sometimes cause the MCMC sampler to crash, but the development version of the package handles the errors without crashing. Therefore, it can be useful to build the package from the repository directly. Some general guidelines for the procedure can be found as part of the [R package tutorial](https://kbroman.org/pkg_primer/pages/build.html)
 
-*** 
+The procedure to build from the repository on a remote Linux system is
 
-### Model intercomparison project implementation
-
-This implementation executes the functional ANOVA for model intercomparison projects (MIPs), such as the [OCO-2 flux MIP](https://gml.noaa.gov/ccgg/OCO2_v9mip/). The statistical model uses the [Vecchia approximation](https://doi.org/10.1214/19-STS755) for Gaussian processes for computational efficiency. Supporting MCMC routines are found in `func_anova_vecchia.R`
-
-1. Pre-processing data files with `mip_data_north_amer_gdal.R`
-2. Perform initial likelihood grid search for GP parameters with `fanova_mip_mltlev_vec_like.R`  
-Site-specific ANOVA estimates are computed and the grid search is performed for the intercept, main effects, and interaction.
-3. Generate initial states with `fanova_mip_mltlev_geninit.R`
-4. Generate burn-in sampling files with `fanova_mip_mltlev_setup_burn.R`
-5. Run initial burn-in for ANOVA components with `fanova_mip_mltlev_vecchia_mcmc_burn.R`. Copy initialization files and set up next step with `fanova_mip_mltlev_geninit_rnd1a.R`
-6. Run further burn-in for ANOVA components and noise GP parameters with `fanova_mip_mltlev_vecchia_mcmc_burn_rnd1a.R`. Update initialization values with `fanova_mip_mltlev_geninit_rnd2.R`
-7. Run full burn-in with `fanova_mip_mltlev_vecchia_mcmc_burn_rnd2.R`  
-Random scan version `fanova_mip_mltlev_vecchia_mcmc_burn_rnd2_rscan.R`  
-Alternative prior (Beta) on smoothness parameters `fnaova_mip_mltlev_vecchia_mcmc_burn_rnd2_alt.R`
-8. Generate post burn-in sampling files with `fanova_mip_mltlev_setup_post.R`
-9. Run post burn-in (fixed MH proposal) with `fanova_mip_mltlev_vecchia_mcmc_post_alt.R`
+* Clone repository: `git clone https://github.com/katzfuss-group/GPvecchia.git`
+* Add `markdown` as a dependency in DESCRIPTION
+* Create/add the following line to `.Renviron` file
+```
+R_LIBS_USER=/home/user/Rlibs
+```
+The `R_LIBS_USER` directory is the directory where the library will be installed. It does not need to be the same location as the cloned repository.
+* Build the package with `R CMD BUILD GPvecchia` or `R CMD build GPvecchia`
+* Install the package in local directory with `R CMD INSTALL GPvecchia_0.1.3.tar.gz`
 

@@ -729,10 +729,16 @@ gp_fldtrace_post = function(vrfm,cflst,pltthm,nstrt = 1) {
   xstr = sprintf(sprstr,locx[lcsq])
   ystr = sprintf(sprstr,locy[lcsq])
   lcstrs = paste0("Location (",xstr,",",ystr,")")
+  lcshrt = paste0("(",xstr,",",ystr,")")
   nlc = length(lcsq)
   
   tct = nsamp - nstrt + 1
-  parr = array(0,c(tct,nlc,nchain))
+  if (vrfm$nctrst <= 1) {
+    parr = array(0,c(tct,nlc,nchain))
+  }
+  else {
+    parr = array(0,c(tct,nlc,vrfm$nctrst,nchain))
+  }
   for (i in seq(1,nchain)) {
     ncsmpl = paste0(cfglst$post_samp_file,i,".nc")
     nc1 = nc_open(ncsmpl)
@@ -741,25 +747,46 @@ gp_fldtrace_post = function(vrfm,cflst,pltthm,nstrt = 1) {
       if (vrfm$nctrst == 0) {
         parr[,j,i] = ncvar_get(nc1,fldnm,start=c(nstrt,lcsq[j]),count=c(tct,1))
       }
-      else {
+      else if (vrfm$nctrst == 1) {
         parr[,j,i] = ncvar_get(nc1,fldnm,start=c(nstrt,lcsq[j],1),count=c(tct,1,1))
       }
+      else {
+        parr[,j,,i] = ncvar_get(nc1,fldnm,start=c(nstrt,lcsq[j],1),count=c(tct,1,vrfm$nctrst))
+      }
+      
     }
     nc_close(nc1)
   }
+
   dimnames(parr)[1] = list(seq(nstrt,nsamp))
-  dimnames(parr)[2] = list(lcstrs)
-  pmlt = melt(parr,varnames=c("Iteration","Location","Chain"))
-  pmlt$Chain = as.factor(pmlt$Chain)
-  
-  tstr = paste("Posterior Trace Field Locations\n",vrfm$vrnm)
-  gplt = ggplot(pmlt,aes(x=Iteration,y=value,group=Chain)) + 
-    facet_wrap( ~ Location,nrow=vrfm$nrow,scales="fixed") + 
-    geom_line(aes(color=Chain),size=0.3) + pltthm + ggtitle(tstr)
-  print(vrfm$ofile)
-  png(vrfm$ofile,width=vrfm$width,height=vrfm$height,res=150)
-  print(gplt)
-  dev.off()
+  if (vrfm$nctrst <= 1) {
+    dimnames(parr)[2] = list(lcstrs)
+    pmlt = melt(parr,varnames=c("Iteration","Location","Chain"))
+    pmlt$Chain = as.factor(pmlt$Chain)
+ 
+    tstr = paste("Posterior Trace Field Locations\n",vrfm$vrnm)   
+    gplt = ggplot(pmlt,aes(x=Iteration,y=value,group=Chain)) + 
+      facet_wrap( ~ Location,nrow=vrfm$nrow,scales="fixed") + 
+      geom_line(aes(color=Chain),size=0.3) + pltthm + ggtitle(tstr)
+    print(vrfm$ofile)
+    png(vrfm$ofile,width=vrfm$width,height=vrfm$height,res=150)
+    print(gplt)
+    dev.off()
+  }
+  else {
+    dimnames(parr)[2] = list(lcshrt)
+    pmlt = melt(parr,varnames=c("Iteration","Location","Contrast","Chain"))
+    pmlt$Chain = as.factor(pmlt$Chain)
+    
+    tstr = paste("Posterior Trace Field Locations\n",vrfm$vrnm)
+    gplt = ggplot(pmlt,aes(x=Iteration,y=value,group=Chain)) + 
+      facet_grid(Location ~ Contrast,scales="fixed") + 
+      geom_line(aes(color=Chain),size=0.3) + pltthm + ggtitle(tstr)
+    print(vrfm$ofile)
+    png(vrfm$ofile,width=vrfm$width,height=vrfm$height,res=150)
+    print(gplt)
+    dev.off()
+  }
 }
 
 ascatter = function(vrfm,cflst,pltthm) {
@@ -974,3 +1001,29 @@ gp_scale_helmert = function(ngrp) {
   }
   return(sclhmt)
 }
+
+q025 = function(dat) {
+  qout = quantile(dat,0.025)
+}
+
+q975 = function(dat) {
+  qout = quantile(dat,0.975)
+}
+
+prob2side = function(dat) {
+  p1 = 2*length(dat[dat<0]) / length(dat)
+  p2 = 2*length(dat[dat>0]) / length(dat)
+  pout = min(c(p1,p2))
+  return(pout)
+}
+
+pstsmry = function(d1) {
+  #dfrmout = data.frame(mean=mean(d1$value),sd=sd(d1$value),
+  #                     q025=q025(d1$value),q975=q975(d1$value),
+  #                     prob0=prob2side(d1$value))
+  dfrmout = data.frame(mean=mean(d1$value),sd=sd(d1$value),
+                       q025=q025(d1$value),med=median(d1$value),q975=q975(d1$value))
+  return(dfrmout)
+}
+
+
