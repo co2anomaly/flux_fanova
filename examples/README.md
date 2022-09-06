@@ -1,6 +1,6 @@
 ### Examples
 
-Additional examples illustrating Bayesian functional analysis of variance. Code for the examples can be found in the top-level directory of the repository. Configurations (CSV and JSON) can be found in the `config` directory. MCMC diagnostic notebooks (R markdown) can be found in the `notebooks` directory.
+Additional examples illustrating Bayesian functional analysis of variance. Code and diagnostic notebooks for the examples can be found in the top-level directory of the repository. Configurations (CSV and JSON) can be found in the `config` directory. 
 
 The data analysis and statistical inference for the examples follow a similar general pattern
 
@@ -13,5 +13,7 @@ The data analysis and statistical inference for the examples follow a similar ge
 7. MCMC stationary evaluation
 8. Final posterior summary
 
-* OCO-2 Flux Model Intercomparison Project: [North America Flux Example](example_mip_namer.md)
-* Two-way ANOVA Simulation: Simulated Data Example
+* [CMS-Flux Eurasia](examples/cms_eurasia/README.md): CMS-Flux esimates over Eurasia for two years, using different aggregation methods
+* [MIP North America](examples/mip_namer/README.md): OCO-2 V9 flux model intercomparison project estimates over North America
+* [MIP Africa](examples/mip_africa/README.md): OCO-2 V9 flux model intercomparison project estimates over Africa
+
