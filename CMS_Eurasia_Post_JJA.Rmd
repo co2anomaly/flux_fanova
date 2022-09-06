@@ -1,0 +1,247 @@
+---
+title: "CMS JJA Stationary MCMC"
+author: "ANOVA User"
+date: "Aug 30, 2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## CMS Eurasia Example Functional ANOVA
+
+### 
+
+Stationary posterior diagnostics for functional ANOVA MCMC run with CMS inversion over Eurasia, JJA. Flux fields are taken as posterior-prior
+
+* Factor A: Year (2016, 2015)
+* Factor B: Data Source (Super-Obs, Fusion)
+
+```{r source_lib, include=FALSE}
+library(ncdf4)
+library(ggplot2)
+library(plyr)
+library(reshape2)
+source("func_anova_fns.R")
+```
+
+```{r local_lib, results='hide'}
+theme_mat = theme_bw() 
+theme_mat$strip.text$size = 12
+theme_mat$axis.title.x$size = 12
+theme_mat$axis.text.x$size = 11
+theme_mat$axis.title.y$size = 12
+theme_mat$axis.text.y$size = 11
+theme_mat$plot.title$size = 12
+theme_mat$plot.title$hjust = 0.5
+theme_mat$legend.text$size = 10
+theme_mat$legend.title$size = 10
+```
+
+```{r read_config, results="hide"}
+exmpcfg = read.csv("config/fanova_cms_eurasia_jja.csv",header = TRUE,stringsAsFactors = FALSE)
+cfglst = as.list(exmpcfg$Value)
+names(cfglst) = exmpcfg$Field
+```
+
+Trace plots for Gaussian process parameters
+
+```{r gp_traces, results="hide"}
+gpgrps = c("mean","mainA","mainB","interact","noise")
+gpbnms = paste0(cfglst$output_dir,"/cms_sp_pars_",gpgrps,"_post.png")
+gprfrm = data.frame(vrnm=gpgrps,ofile=gpbnms,nrow=rep(2,5),width=rep(1200,5),height=rep(900,5),stringsAsFactors = FALSE)
+d_ply(gprfrm,c("vrnm"),.fun=gp_partrace_post,cflst=cfglst,pltthm=theme_mat,nstrt=101)
+```
+
+```{r gp_show_trace, results='asis', echo = FALSE}
+for (i in seq(1,nrow(gprfrm))) {
+    cat("![", gprfrm$vrnm[i], "](", gprfrm$ofile[i], ")\n")  
+}
+```
+### MH Acceptance
+
+Metropolis-Hastings acceptance rates
+
+```{r gp_mh, results="hide"}
+mhfrm = gprfrm
+mhfrm$width=rep(750,5)
+mhfrm$height=rep(600,5)
+mhfrm$ofile = paste0(cfglst$output_dir,"/cms_mh_sp_pars_",gpgrps,"_post.png")
+d_ply(mhfrm,c("vrnm"),.fun=aratebox,.progress="text",cflst=cfglst,pltthm=theme_mat)
+```
+
+```{r gp_mh_show_trace, results='asis', echo = FALSE}
+for (i in seq(1,nrow(mhfrm))) {
+    cat("![", mhfrm$vrnm[i], "](", mhfrm$ofile[i], ")\n")  
+}
+```
+
+### ANOVA fields at selected locations
+
+Trace plots for the ANOVA elements at selected locations
+
+```{r gp_field_mean, results="hide"}
+nctra = as.integer(cfglst$nleva) - 1
+nctrb = as.integer(cfglst$nlevb) - 1
+nctri = nctra * nctrb
+fldfrm = gprfrm[1:4,]
+fldfrm$nctrst = c(0,nctra,nctrb,nctri)
+fldfrm$locst = rep(2,4)
+fldfrm$locfn = rep(98,4)
+fldfrm$locinc = rep(12,4)
+fldfrm$nrow = rep(3,4)
+fldfrm$ndigit = rep(1,4)
+fldfrm$height[fldfrm$nctrst > 1] = 1800
+fldfrm$width[fldfrm$nctrst > 1] = fldfrm$nctrst[fldfrm$nctrst > 1] * 400
+fldfrm$ofile = paste0(cfglst$output_dir,"/cms_field_locs_",gpgrps[1:4],"_post.png")
+d_ply(fldfrm,c("vrnm"),.fun=gp_fldtrace_post,.progress="text",cflst=cfglst,pltthm=theme_mat,nstrt=101)
+```
+
+```{r gp_field_show_trace, results='asis', echo = FALSE}
+for (i in seq(1,nrow(fldfrm))) {
+    cat("![", fldfrm$vrnm[i], "](", fldfrm$ofile[i], ")\n")  
+}
+```
+
+***
+
+### Further MH diagnostics
+
+Covariance of spatial params, by chain
+
+Mean
+
+```{r gp_cov_mean}
+gpgrps = c("mean","mainA","mainB","interact","noise")
+vnms = c("LogSD","LogRg","LogitNu")
+numn = 0.25
+numx = 3.75
+gcvsmn = gp_parcov_post(vrnm="mean",cflst=cfglst,nstrt=101)
+
+# Adjust for logit
+gcvsmn[,3,] = exp(gcvsmn[,3,])
+nustr = (gcvsmn[,3,]-numn) / (numx-numn)
+gcvsmn[,3,] = log(nustr/(1.0-nustr))
+
+# Summarize
+cvchnmn = aaply(gcvsmn,3,.fun = cov)
+frmmn = adply(cvchnmn,1,.fun = cov_to_frm, vrnms = vnms)
+print(frmmn)
+```
+
+Main A
+
+```{r gp_cov_mainA}
+gcvsa = gp_parcov_post(vrnm="mainA",cflst=cfglst,nstrt=101)
+# Adjust for logit
+gcvsa[,3,] = exp(gcvsa[,3,])
+nustr = (gcvsa[,3,]-numn) / (numx-numn)
+gcvsa[,3,] = log(nustr/(1.0-nustr))
+
+# Summarize
+cvchna = aaply(gcvsa,3,.fun = cov)
+frma = adply(cvchna,1,.fun = cov_to_frm, vrnms = vnms)
+print(frma)
+```
+
+Main B
+
+```{r gp_cov_mainB}
+gcvsb = gp_parcov_post(vrnm="mainB",cflst=cfglst,nstrt=101)
+# Adjust for logit
+gcvsb[,3,] = exp(gcvsb[,3,])
+nustr = (gcvsb[,3,]-numn) / (numx-numn)
+gcvsb[,3,] = log(nustr/(1.0-nustr))
+
+# Summarize
+cvchnb = aaply(gcvsb,3,.fun = cov)
+frmb = adply(cvchnb,1,.fun = cov_to_frm, vrnms = vnms)
+print(frmb)
+```
+
+Interact
+
+```{r gp_cov_interact}
+gcvsi = gp_parcov_post(vrnm="interact",cflst=cfglst,nstrt=101)
+# Adjust for logit
+gcvsi[,3,] = exp(gcvsi[,3,])
+nustr = (gcvsi[,3,]-numn) / (numx-numn)
+gcvsi[,3,] = log(nustr/(1.0-nustr))
+
+# Summarize
+cvchni = aaply(gcvsi,3,.fun = cov)
+frmi = adply(cvchni,1,.fun = cov_to_frm, vrnms = vnms)
+print(frmi)
+```
+
+Noise
+
+```{r gp_cov_noise}
+gcvsns = gp_parcov_post(vrnm="noise",cflst=cfglst,nstrt=101)
+# Adjust for logit
+gcvsns[,3,] = exp(gcvsns[,3,])
+nustr = (gcvsns[,3,]-numn) / (numx-numn)
+gcvsns[,3,] = log(nustr/(1.0-nustr))
+
+# Summarize
+cvchnns = aaply(gcvsns,3,.fun = cov)
+frmns = adply(cvchnns,1,.fun = cov_to_frm, vrnms = vnms)
+print(frmns)
+```
+
+### GP Parameter Summaries
+
+Summary of GP parameter posteriors
+
+Mean
+
+```{r gp_smry_mean}
+gpgrps = c("mean","mainA","mainB","interact","noise")
+gpprs = c("StdDev","Range","Smooth")
+muarr = gp_parcov_post(vrnm="mean",cflst=cfglst,nstrt=1,logpar=FALSE)
+dimnames(muarr)[2] = list(gpprs)
+mumlt = melt(muarr,varnames = c("Iteration","Param","Chain"))
+mucst = ddply(mumlt,c("Param"),.fun = pstsmry)
+print(mucst)
+```
+
+Main A
+
+```{r gp_smry_mainA}
+aarr = gp_parcov_post(vrnm="mainA",cflst=cfglst,nstrt=1,logpar=FALSE)
+dimnames(aarr)[2] = list(gpprs)
+amlt = melt(aarr,varnames = c("Iteration","Param","Chain"))
+acst = ddply(amlt,c("Param"),.fun = pstsmry)
+print(acst)
+```
+
+Main B
+
+```{r gp_smry_mainB}
+barr = gp_parcov_post(vrnm="mainB",cflst=cfglst,nstrt=1,logpar=FALSE)
+dimnames(barr)[2] = list(gpprs)
+bmlt = melt(barr,varnames = c("Iteration","Param","Chain"))
+bcst = ddply(bmlt,c("Param"),.fun = pstsmry)
+print(bcst)
+```
+
+Interact
+
+```{r gp_smry_interact}
+abarr = gp_parcov_post(vrnm="interact",cflst=cfglst,nstrt=1,logpar=FALSE)
+dimnames(abarr)[2] = list(gpprs)
+abmlt = melt(abarr,varnames = c("Iteration","Param","Chain"))
+abcst = ddply(abmlt,c("Param"),.fun = pstsmry)
+print(abcst)
+```
+
+Noise
+
+```{r gp_smry_noise}
+epsarr = gp_parcov_post(vrnm="noise",cflst=cfglst,nstrt=1,logpar=FALSE)
+dimnames(epsarr)[2] = list(gpprs)
+epsmlt = melt(epsarr,varnames = c("Iteration","Param","Chain"))
+epscst = ddply(epsmlt,c("Param"),.fun = pstsmry)
+print(epscst)
+```
