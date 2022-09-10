@@ -13,7 +13,7 @@ The data analysis and statistical inference for the examples follow a similar ge
 7. MCMC stationary evaluation
 8. Final posterior summary
 
-* [CMS-Flux Eurasia](examples/cms_eurasia/README.md): CMS-Flux esimates over Eurasia for two years, using different aggregation methods
-* [MIP North America](examples/mip_namer/README.md): OCO-2 V9 flux model intercomparison project estimates over North America
-* [MIP Africa](examples/mip_africa/README.md): OCO-2 V9 flux model intercomparison project estimates over Africa
+* [CMS-Flux Eurasia](cms_eurasia/README.md): CMS-Flux esimates over Eurasia for two years, using different aggregation methods
+* [MIP North America](mip_namer/README.md): OCO-2 V9 flux model intercomparison project estimates over North America
+* [MIP Africa](mip_africa/README.md): OCO-2 V9 flux model intercomparison project estimates over Africa
 
