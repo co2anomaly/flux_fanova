@@ -1,0 +1,56 @@
+{
+  "prior": {
+    "mean": {
+      "gp_stddev": {"form":"halfnormal", "stddev": 500.0},
+      "gp_range": {"form":"lognormal", "mean": 6.0, "stddev": 1.0},
+      "gp_smoothness": {"form":"beta", "shape1": 5.0, "shape2": 20.0, "lim1": 0.25, "lim2": 3.75}
+    },
+    "mainA": {          
+      "gp_stddev": {"form":"halfnormal", "stddev": 300.0},
+      "gp_range": {"form":"lognormal", "mean": 6.0, "stddev": 1.0},
+      "gp_smoothness": {"form":"beta", "shape1": 5.0, "shape2": 20.0, "lim1": 0.25, "lim2": 3.75}
+    },
+    "mainB": {          
+      "gp_stddev": {"form":"halfnormal", "stddev": 300.0},
+      "gp_range": {"form":"lognormal", "mean": 5.0, "stddev": 0.5},
+      "gp_smoothness": {"form":"beta", "shape1": 5.0, "shape2": 20.0, "lim1": 0.25, "lim2": 3.75}
+    },
+    "interact": {          
+      "gp_stddev": {"form":"halfnormal", "stddev": 200.0},
+      "gp_range": {"form":"lognormal", "mean": 5.0, "stddev": 0.5},
+      "gp_smoothness": {"form":"beta", "shape1": 5.0, "shape2": 20.0, "lim1": 0.25, "lim2": 3.75}
+    },
+    "noise": {          
+      "gp_stddev": {"form":"halfnormal", "stddev": 200.0},
+      "gp_range": {"form":"lognormal", "mean": 5.0, "stddev": 0.5},
+      "gp_smoothness": {"form":"beta", "shape1": 5.0, "shape2": 20.0, "lim1": 0.25, "lim2": 3.75}
+    }
+  },
+  "mh": {
+    "mean": {
+      "stddev": 0.045,
+      "sdvec": [1.0, 1.8, 1.5],
+      "corvec": [1.0, 0.6, -0.2, 0.6, 1, -0.8, -0.2, -0.8, 1]
+    },      
+    "mainA": {
+      "stddev": 0.018,
+      "sdvec": [1.0, 1.6, 0.6],
+      "corvec": [1.0, 0.6, 0.1, 0.6, 1, -0.5, 0.1, -0.5, 1]
+    },      
+    "mainB": {
+      "stddev": 0.03,
+      "sdvec": [1.0, 1.0, 0.8],
+      "corvec": [1.0, 0.5, 0.3, 0.5, 1, -0.4, 0.3, -0.4, 1]
+    },      
+    "interact": {
+      "stddev": 0.025,
+      "sdvec": [1.0, 2.0, 2.5],
+      "corvec": [1.0, 0.5, 0.1, 0.5, 1, -0.3, 0.1, -0.3, 1]
+    },      
+    "noise": {
+      "stddev": 0.0065,
+      "sdvec": [1.0, 2.0, 2.4],
+      "corvec": [1.0, 0.6, -0.2, 0.6, 1, -0.8, -0.2, -0.8, 1]
+    }      
+  }
+}
