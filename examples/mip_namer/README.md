@@ -10,7 +10,7 @@ This example uses a subset of four models from the OCO-2 V9 MIP and examines the
 * Run within R console/RStudio:  
 `> config = 'config/fanova_mip_namer_prdev.csv'`  
 `> chain = 1`  
-`> system(paste("Rscript fanova_cms_mcmc_burn_rnd1.R",config,chain))`
+`> system(paste("Rscript fanova_mip_mcmc_burn_rnd1.R",config,chain))`
 * Run in batch (remote/cluster):  
 `Rscript fanova_sim_mcmc_burn.R fanova_example_config.csv 1`
 * Repeat for desired number of chains (4 in example)
