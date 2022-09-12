@@ -28,7 +28,7 @@ The internal matrix operations in the CRAN version of GPvecchia can sometimes ca
 The procedure to build from the repository on a remote Linux system is
 
 * Clone repository: `git clone https://github.com/katzfuss-group/GPvecchia.git`
-* Add `markdown` as a dependency in DESCRIPTION
+* Add `markdown` as to the Imports list in DESCRIPTION
 * Create/add the following line to `.Renviron` file
 ```
 R_LIBS_USER=/home/user/Rlibs
