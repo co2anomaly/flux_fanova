@@ -19,6 +19,27 @@ Several examples of the functional ANOVA approach for carbon flux inversions are
 
 ***
 
+### Dependencies
+
+The functional ANOVA implementations are in R. Additional R packages required include 
+
+* `jsonlite`
+* `reshape2`
+* `plyr`
+* `ggplot2`
+* `colorspace`
+* `fields`
+* `ncdf4`
+    - The system will also need NetCDF libraries installed
+* `rgdal`
+    - This library is only required if generating data files from the OCO-2 flux MIP, e.g. `mip_data_north_amer_gdal.R`
+    - The system will also need libgdal installed
+* `GPvecchia` (development build preferred)
+    - For a development build, all of the packages GPvecchia depends on are needed: `Rcpp`, `methods`, `stats`, `sparseinv`, `fields`, `Matrix`, `parallel`, `GpGp`, `FNN`, `markdown`, `RcppArmadillo`, `BH`
+    - Additional packages needed for building documentation `rmarkdown`, `knitr`, `mvtnorm`
+
+***
+
 ### Development build of GPvecchia
 
 The spatial covariance routines use the [GPvecchia R package](https://github.com/katzfuss-group/GPvecchia)
@@ -28,7 +49,7 @@ The internal matrix operations in the CRAN version of GPvecchia can sometimes ca
 The procedure to build from the repository on a remote Linux system is
 
 * Clone repository: `git clone https://github.com/katzfuss-group/GPvecchia.git`
-* Add `markdown` as a dependency in DESCRIPTION
+* Add `markdown` as to the Imports list in DESCRIPTION
 * Create/add the following line to `.Renviron` file
 ```
 R_LIBS_USER=/home/user/Rlibs

@@ -4,13 +4,13 @@ This implementation executes the functional ANOVA for model intercomparison proj
 
 This example uses a subset of four models from the OCO-2 V9 MIP and examines the monthly flux estimates for June-July-August (JJA) of 2016 over Africa.
 
-**Compuational Note:** The MCMC sampling scripts (`mcmc_burn`, `mcmc_post`) can have long runtimes. These can be run from the R console/RStudio interactively or non-interactively in batch mode.  
-**Configuration Note:** All of the `fanova_mip` R scripts apply to the MIP ANOVA for any region. The ANOVA config CSV file may need to be changed in these scripts to point to the appropriate region's example. 
+**Configuration Note:** All of the `fanova_mip` R scripts apply to the MIP ANOVA for any region. The ANOVA config CSV file may need to be changed in these scripts to point to the appropriate region's example.  
+**Compuational Note:** The MCMC sampling scripts (`mcmc_burn`, `mcmc_post`) can have long runtimes. These can be run from the R console/RStudio interactively or non-interactively in batch mode. 
 
 * Run within R console/RStudio:  
 `> config = 'config/fanova_mip_africa_prdev.csv'`  
 `> chain = 1`  
-`> system(paste("Rscript fanova_cms_mcmc_burn_rnd1.R",config,chain))`
+`> system(paste("Rscript fanova_mip_mcmc_burn_rnd1.R",config,chain))`
 * Run in batch (remote/cluster):  
 `Rscript fanova_sim_mcmc_burn.R fanova_mip_africa_prdev.csv 1`
 * Repeat for desired number of chains (4 in example)
@@ -27,6 +27,7 @@ The [posterior summaries and maps](#mcmc-stationary-summary) can be reproduced w
     - ANOVA config: `fanova_mip_africa_prdev.csv`  
 In addition to file and directory settings for the functional ANOVA, this file includes a setting `data_src_dir` that should identify the directory that stores the downloaded MIP results.
     - MCMC and prior parameters: `MIP_Africa_PrDev_Prior_Beta.json`
+* The `Coast.csv` file should placed in the `examples/cms_eurasia` directory if maps will be plotted.
 * The data are extracted from the MIP collection, mapped, and prepped for analysis with the `mip_data_africa_gdal.R` script. The spatial covariance functions in the GPvecchia package compute distances internally, so the data processing script converts location information to UTM coordinates.
 * Perform initial likelihood grid search for GP parameters with `fanova_mip_vecchia_like.R`  
 Site-specific ANOVA estimates are computed and the grid search is performed for the intercept, main effects, and interaction.
