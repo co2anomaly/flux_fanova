@@ -49,7 +49,7 @@ yrs = c(2015,2016)
 # Plot original fluxes
 dimnames(flux) = list(LocIdx=locsq,Year=yrs,DataSource=dsrc,Month=1:3)
 flxall = melt(flux,value.name = "Flux")
-flxmrg = merge(flxmrg,locfrm)
+flxmrg = merge(flxall,locfrm)
 
 flxmrg = fklon(flxmrg,lonvar = "Longitude",center=90)
 flxmrg$Season = "JJA"
