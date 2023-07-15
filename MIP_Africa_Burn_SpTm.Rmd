@@ -1,0 +1,211 @@
+---
+title: "FANOVA Example Burn-In"
+author: "Jon Hobbs"
+date: "May 15, 2023"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## MIP Africa Example Functional ANOVA
+
+### 
+
+Burn-in diagnostics for functional ANOVA MCMC run, OCO-2 V9 MIP over Africa  
+Response is posterior-prior
+
+* Factor A: Model
+* Factor B: Data Source (IS, LNLG)
+
+```{r source_lib, include=FALSE}
+library(fields)
+library(ncdf4)
+library(ggplot2)
+```
+
+```{r local_lib, results='hide'}
+source("func_anova_tidy.R")
+
+theme_mat = theme_bw() 
+theme_mat$strip.text$size = 12
+theme_mat$axis.title.x$size = 12
+theme_mat$axis.text.x$size = 11
+theme_mat$axis.title.y$size = 12
+theme_mat$axis.text.y$size = 11
+theme_mat$plot.title$size = 12
+theme_mat$plot.title$hjust = 0.5
+theme_mat$legend.text$size = 10
+theme_mat$legend.title$size = 10
+```
+
+```{r read_config, results="hide"}
+exmpcfg = read.csv("config/fanova_mip_africa_prdev_sptm.csv",header = TRUE,stringsAsFactors = FALSE)
+cfglst = as.list(exmpcfg$Value)
+names(cfglst) = exmpcfg$Field
+```
+
+### GP Parameters
+
+Trace plots for Gaussian process parameters
+
+```{r gp_traces, results="hide"}
+gpgrps = c("mean","mainA","mainB","interact","noise")
+gpbnms = paste0(cfglst$output_dir,"/mip_sp_pars_",gpgrps,"_burn.png")
+gprfrm = data.frame(vrnm=gpgrps,ofile=gpbnms,nrow=rep(2,5),width=rep(1200,5),height=rep(900,5),
+                    arparam=c(rep(FALSE,4),TRUE),stringsAsFactors = FALSE)
+for (i in seq(1,nrow(gprfrm))) {
+    gp_partrace_burn(gprfrm[i,],cflst=cfglst,pltthm=theme_mat,nstrt=151)
+}
+```
+
+```{r gp_show_trace, results='asis', echo = FALSE}
+for (i in seq(1,nrow(gprfrm))) {
+    cat("![", gprfrm$vrnm[i], "](", gprfrm$ofile[i], ")\n")  
+}
+```
+
+### MH Acceptance
+
+Metropolis-Hastings acceptance rates
+
+```{r gp_mh, results="hide"}
+mhfrm = gprfrm
+mhfrm$width=rep(750,5)
+mhfrm$height=rep(600,5)
+mhfrm$ofile = paste0(cfglst$output_dir,"/mip_mh_sp_pars_",gpgrps,"_burn.png")
+for (i in seq(1,nrow(gprfrm))) {
+    ascatter(mhfrm[i,],cflst=cfglst,pltthm=theme_mat)
+}
+```
+
+```{r gp_mh_show_trace, results='asis', echo = FALSE}
+for (i in seq(1,nrow(mhfrm))) {
+    cat("![", mhfrm$vrnm[i], "](", mhfrm$ofile[i], ")\n")  
+}
+```
+
+### ANOVA fields at selected locations
+
+Trace plots for the ANOVA elements at selected locations
+
+```{r gp_field_mean, results="hide"}
+nctra = as.integer(cfglst$nleva) - 1
+nctrb = as.integer(cfglst$nlevb) - 1
+nctri = nctra * nctrb
+fldfrm = gprfrm[1:4,]
+fldfrm$nctrst = c(0,nctra,nctrb,nctri)
+fldfrm$locst = rep(2,4)
+fldfrm$locfn = rep(98,4)
+fldfrm$locinc = rep(12,4)
+fldfrm$nrow = rep(3,4)
+fldfrm$ndigit = rep(1,4)
+fldfrm$height[fldfrm$nctrst > 1] = 1800
+fldfrm$width[fldfrm$nctrst > 1] = fldfrm$nctrst[fldfrm$nctrst > 1] * 400
+fldfrm$ofile = paste0(cfglst$output_dir,"/mip_field_locs_",gpgrps[1:4],"_burn.png")
+for (i in seq(1,nrow(fldfrm))) {
+    gp_fldtrace_burn(fldfrm[i,],cflst=cfglst,pltthm=theme_mat,nstrt=151)
+}
+```
+
+```{r gp_field_show_trace, results='asis', echo = FALSE}
+for (i in seq(1,nrow(fldfrm))) {
+    cat("![", fldfrm$vrnm[i], "](", fldfrm$ofile[i], ")\n")  
+}
+```
+
+***
+
+### Further MH diagnostics
+
+Covariance of spatial params, by chain
+
+Mean
+
+```{r gp_cov_mean}
+chsq = seq(1,cfglst$nchain)
+gpgrps = c("mean","mainA","mainB","interact","noise")
+vnms = c("LogSD","LogRg","LogitNu")
+numn = 0.25
+numx = 3.75
+gcvsmn = gp_parcov_burn(vrnm="mean",cflst=cfglst,nstrt=151)
+
+# Adjust for logit
+gcvsmn[,3,] = exp(gcvsmn[,3,])
+nustr = (gcvsmn[,3,]-numn) / (numx-numn)
+gcvsmn[,3,] = log(nustr/(1.0-nustr))
+
+# Summarize
+cvchnmn = apply(gcvsmn,3,cov)
+frmmn = map_dfr(chsq, .f=covs_frm, cvmt=cvchnmn, vrnms=vnms)
+print(frmmn)
+```
+
+Main A
+
+```{r gp_cov_mainA}
+gcvsa = gp_parcov_burn(vrnm="mainA",cflst=cfglst,nstrt=151)
+# Adjust for logit
+gcvsa[,3,] = exp(gcvsa[,3,])
+nustr = (gcvsa[,3,]-numn) / (numx-numn)
+gcvsa[,3,] = log(nustr/(1.0-nustr))
+
+# Summarize
+cvchna = apply(gcvsa,3,cov)
+frma = map_dfr(chsq, .f=covs_frm, cvmt=cvchna, vrnms=vnms)
+print(frma)
+```
+
+Main B
+
+```{r gp_cov_mainB}
+gcvsb = gp_parcov_burn(vrnm="mainB",cflst=cfglst,nstrt=151)
+# Adjust for logit
+gcvsb[,3,] = exp(gcvsb[,3,])
+nustr = (gcvsb[,3,]-numn) / (numx-numn)
+gcvsb[,3,] = log(nustr/(1.0-nustr))
+
+# Summarize
+cvchnb = apply(gcvsb,3,cov)
+frmb = map_dfr(chsq, .f=covs_frm, cvmt=cvchnb, vrnms=vnms)
+print(frmb)
+```
+
+Interact
+
+```{r gp_cov_interact}
+gcvsi = gp_parcov_burn(vrnm="interact",cflst=cfglst,nstrt=151)
+# Adjust for logit
+gcvsi[,3,] = exp(gcvsi[,3,])
+nustr = (gcvsi[,3,]-numn) / (numx-numn)
+gcvsi[,3,] = log(nustr/(1.0-nustr))
+
+# Summarize
+cvchni = apply(gcvsi,3,cov)
+frmni = map_dfr(chsq, .f=covs_frm, cvmt=cvchni, vrnms=vnms)
+print(frmni)
+```
+
+Noise
+
+```{r gp_cov_noise}
+vnms = c("LogSD","LogRg","LogitNu","LogitRho")
+gcvsns = gp_parcov_burn(vrnm="noise",cflst=cfglst,nstrt=151,logpar=FALSE,arparam=TRUE)
+# Adjust for logit
+gcvsns[,1,] = log(gcvsns[,1,])
+gcvsns[,2,] = log(gcvsns[,2,])
+
+nustr = (gcvsns[,3,]-numn) / (numx-numn)
+gcvsns[,3,] = log(nustr/(1.0-nustr))
+
+rhomn = -1.0
+rhomx = 1.0
+nustr = (gcvsns[,4,]-rhomn) / (rhomx-rhomn)
+gcvsns[,4,] = log(nustr/(1.0-nustr))
+
+# Summarize
+cvchnns = apply(gcvsns,3,cov)
+frmns = map_dfr(chsq, .f=covs_frm, cvmt=cvchnns, vrnms=vnms)
+print(frmns)
+```
