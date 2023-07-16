@@ -872,14 +872,14 @@ aratebox = function(vrfm,cflst,pltthm) {
   # pltthm: a ggplot theme
   
   nchain = as.integer(cflst$nchain)
-  niter = as.integer(cfglst$nburn)
+  niter = as.integer(cfglst$npost)
   nadapt = as.integer(cfglst$post_mh_adapt)
   nmhsv = floor(niter / nadapt)
   
   acparr = array(0,c(nmhsv,4)) 
   vrt = paste0("mh_acc_rate_",vrfm$vrnm)
   for (i in seq(1,nchain)) {
-    ncsmpl = paste0(cfglst$burn_samp_file,i,".nc")
+    ncsmpl = paste0(cfglst$post_samp_file,i,".nc")
     nc1 = nc_open(ncsmpl)
     acparr[,i] = ncvar_get(nc1,vrt,start=c(1),
                              count=c(nmhsv))
