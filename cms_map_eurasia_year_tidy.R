@@ -66,11 +66,13 @@ prfnl = prfnl %>% mutate(FluxPlt = case_when(Flux < -2000 ~ -1999.0,
                                              .default = Flux),
                          PrAnn = Flux)
 prfnl = fklon_tbl(prfnl,lonvar = "Longitude",center=90)
+
+flxlb2 = bquote(atop("Flux", "gC" ~ "m" ^ -2 ~ "yr" ^-1))
 ttlstr = 'CMS Land Prior Flux'
 gmn = ggplot(prfnl,aes(x=fk360,y=Latitude)) + geom_tile(aes(fill=FluxPlt)) + 
   geom_path(aes(x=fk360,y=Y,group=grp2chr), data=wrld, size=0.8, color="#444444") +
   facet_grid(Year ~ MFct) + 
-  scale_fill_gradientn("Flux",colors=r7,limits=c(-2000,2000)) +  
+  scale_fill_gradientn(flxlb2,colors=r7,limits=c(-2000,2000)) +  
   scale_x_continuous("",breaks=lnlb$fk360,labels=parse(text=lnlb$labxpr),limits=c(-110,110)) + 
   scale_y_continuous("",breaks=ltlb$origlat,labels=parse(text=ltlb$labxpr),limits=c(0,84)) + 
   ggtitle(ttlstr) + theme_mat + coord_equal()
@@ -100,7 +102,7 @@ flxmrg$Trt = paste(flxmrg$Year,flxmrg$DatSrc,sep="_")
 gmn = ggplot(flxmrg,aes(x=fk360,y=Latitude)) + geom_tile(aes(fill=FluxPlt)) + 
   geom_path(aes(x=fk360,y=Y,group=grp2chr), data=wrld, size=0.8, color="#444444") +
   facet_grid(Trt ~ MFct) + 
-  scale_fill_gradientn("Flux",colors=r7,limits=c(-2000,2000)) +  
+  scale_fill_gradientn(flxlb2,colors=r7,limits=c(-2000,2000)) +  
   scale_x_continuous("",breaks=lnlb$fk360,labels=parse(text=lnlb$labxpr),limits=c(-110,110)) + 
   scale_y_continuous("",breaks=ltlb$origlat,labels=parse(text=ltlb$labxpr),limits=c(0,84)) + 
   ggtitle("CMS Land Flux") + theme_mat + coord_equal()

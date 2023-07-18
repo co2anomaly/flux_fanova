@@ -114,11 +114,13 @@ prfnl = prfnl %>% mutate(FluxPlt = case_when(Flux < -2000 ~ -1999.0,
                          PrAnn = Flux)
 r7 = diverge_hcl(7,h=c(240,0),c=80,l=c(50,100),power=0.3)
 frmsb = prfnl %>% filter(Expt == expt[1]) 
+
+flxlb2 = bquote(atop("Flux", "gC" ~ "m" ^ -2 ~ "yr" ^-1))
 ttlstr = 'North America JJA 2016: Prior'
 gmn = ggplot(frmsb,aes(x=fk360,y=Latitude)) + geom_tile(aes(fill=FluxPlt)) + 
   geom_path(aes(x=fk360,y=Y,group=grp2chr), data=wrld, size=0.8, color="#444444") +
   facet_grid(Time ~ Model) + 
-  scale_fill_gradientn("Flux",colors=r7,limits=c(-2000,2000)) + 
+  scale_fill_gradientn(flxlb2,colors=r7,limits=c(-2000,2000)) + 
   scale_x_continuous("",breaks=lnlb$fk360,labels=parse(text=lnlb$labxpr),limits=c(-80,40)) + 
   scale_y_continuous("",breaks=ltlb$origlat,labels=parse(text=ltlb$labxpr),limits=c(10,84)) + 
   ggtitle(ttlstr) + theme_mat + coord_equal()
@@ -149,7 +151,7 @@ for (i in seq(1,length(expt))) {
   gmn = ggplot(frmsb,aes(x=fk360,y=Latitude)) + geom_tile(aes(fill=FluxPlt)) + 
     geom_path(aes(x=fk360,y=Y,group=grp2chr), data=wrld, size=0.8, color="#444444") +
     facet_grid(Time ~ Model) + 
-    scale_fill_gradientn("Flux",colors=r7,limits=c(-2000,2000)) + 
+    scale_fill_gradientn(flxlb2,colors=r7,limits=c(-2000,2000)) + 
     scale_x_continuous("",breaks=lnlb$fk360,labels=parse(text=lnlb$labxpr),limits=c(-80,40)) + 
     scale_y_continuous("",breaks=ltlb$origlat,labels=parse(text=ltlb$labxpr),limits=c(10,84)) + 
     ggtitle(ttlstr) + theme_mat + coord_equal()
@@ -174,7 +176,7 @@ for (i in seq(1,length(expt))) {
   gmn = ggplot(frmsb,aes(x=fk360,y=Latitude)) + geom_tile(aes(fill=FluxPlt)) + 
     geom_path(aes(x=fk360,y=Y,group=grp2chr), data=wrld, size=0.8, color="#444444") +
     facet_grid(Time ~ Model) + 
-    scale_fill_gradientn("Flux",colors=r7,limits=c(-2000,2000)) + 
+    scale_fill_gradientn(flxlb2,colors=r7,limits=c(-2000,2000)) + 
     scale_x_continuous("",breaks=lnlb$fk360,labels=parse(text=lnlb$labxpr),limits=c(-80,40)) + 
     scale_y_continuous("",breaks=ltlb$origlat,labels=parse(text=ltlb$labxpr),limits=c(10,84)) + 
     ggtitle(ttlstr) + theme_mat + coord_equal()
