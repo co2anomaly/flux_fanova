@@ -84,10 +84,11 @@ mumrg = mufrm %>% left_join(lcfrm, by="LocID")
 mumrg = fklon_tbl(mumrg,lonvar = "Longitude",center=-90)
 r7 = diverge_hcl(7,h=c(240,0),c=80,l=c(50,100),power=0.3)
 std9 = sequential_hcl(9,h=340,c.=c(0,80),l=c(100,50)) 
+flxlb2 = bquote(atop("Flux Increment", "gC" ~ "m" ^ -2 ~ "yr" ^-1))
 
 gmn = ggplot(mumrg,aes(x=fk360,y=Latitude)) + geom_tile(aes(fill=Mu)) + 
   geom_path(aes(x=fk360,y=Y,group=grp2chr), data=wrld, size=0.8, color="#444444") +
-  scale_fill_gradientn("Flux",colors=r7,limits=c(-800,800))  + 
+  scale_fill_gradientn(flxlb2,colors=r7,limits=c(-800,800))  + 
   scale_x_continuous("",breaks=lnlb$fk360,labels=parse(text=lnlb$labxpr),limits=c(-80,40)) + 
   scale_y_continuous("",breaks=ltlb$origlat,labels=parse(text=ltlb$labxpr),limits=c(10,84)) + 
   ggtitle("MIP Flux ANOVA Overall Mean") + theme_mat + coord_equal()
@@ -124,7 +125,7 @@ amrg = afrm %>% left_join(lcfrm, by="LocID")
 amrg = fklon_tbl(amrg,lonvar = "Longitude",center=-90)
 geffA = ggplot(amrg,aes(x=fk360,y=Latitude)) + geom_tile(aes(fill=PostMean)) + 
   geom_path(aes(x=fk360,y=Y,group=grp2chr), data=wrld, size=0.8, color="#444444") +
-  scale_fill_gradientn("Flux",colors=r7,limits=c(-60,60))  + 
+  scale_fill_gradientn(flxlb2,colors=r7,limits=c(-60,60))  + 
   facet_wrap( ~ Model) + 
   scale_x_continuous("",breaks=lnlb$fk360,labels=parse(text=lnlb$labxpr),limits=c(-80,40)) + 
   scale_y_continuous("",breaks=ltlb$origlat,labels=parse(text=ltlb$labxpr),limits=c(10,84)) + 
@@ -149,7 +150,7 @@ bmrg = bfrm %>% left_join(lcfrm, by="LocID")
 bmrg = fklon_tbl(bmrg,lonvar = "Longitude",center=-90)
 geffB = ggplot(bmrg,aes(x=fk360,y=Latitude)) + geom_tile(aes(fill=PostMean)) + 
   geom_path(aes(x=fk360,y=Y,group=grp2chr), data=wrld, size=0.8, color="#444444") +
-  scale_fill_gradientn("Flux",colors=r7,limits=c(-60,60))  + 
+  scale_fill_gradientn(flxlb2,colors=r7,limits=c(-60,60))  + 
   facet_wrap( ~ DatSrc,nrow=1) + 
   scale_x_continuous("",breaks=lnlb$fk360,labels=parse(text=lnlb$labxpr),limits=c(-80,40)) + 
   scale_y_continuous("",breaks=ltlb$origlat,labels=parse(text=ltlb$labxpr),limits=c(10,84)) + 
@@ -174,7 +175,7 @@ muqmrg = muqfrm %>% left_join(lcfrm, by="LocID")
 muqmrg = fklon_tbl(muqmrg,lonvar = "Longitude",center=-90)
 gmuq = ggplot(muqmrg,aes(x=fk360,y=Latitude)) + geom_tile(aes(fill=Flux)) + 
   geom_path(aes(x=fk360,y=Y,group=grp2chr), data=wrld, size=0.8, color="#444444") +
-  scale_fill_gradientn("Flux",colors=r7,limits=c(-1000,1000))  + 
+  scale_fill_gradientn(flxlb2,colors=r7,limits=c(-1000,1000))  + 
   facet_wrap( ~ Pctile,nrow=1) + 
   scale_x_continuous("",breaks=lnlb$fk360,labels=parse(text=lnlb$labxpr),limits=c(-80,40)) + 
   scale_y_continuous("",breaks=ltlb$origlat,labels=parse(text=ltlb$labxpr),limits=c(10,84)) + 

@@ -1,5 +1,5 @@
 # Process MIP datasets for functional ANOVA, map monthly values
-# North America, JJA 2016
+# CMS-Flux data aggregation example
 # Save locations as UTM coordinates
 
 library(ggplot2)

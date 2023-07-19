@@ -43,7 +43,7 @@ lcfrm = data.frame(LocID = seq(1,nloc),Longitude = loncms,Latitude = latcms)
 # Read posterior results
 fctnms = c("mean","mainA","mainB","interact")
 gpnms = c("stddev","range","smoothness")
-fctlbs = c("Mean","Year","Aggregation","Interact")
+fctlbs = c("Mean","Year","Aggregation","Interaction")
 fctord = seq(1,4)
 fctfrm = data.frame(ANOVACmp=fctord,ANOVALbl=fctlbs)
 
@@ -97,11 +97,12 @@ pstmrg$FluxPlt[pstmrg$FluxPlt < -400] = -399.0
 pstmrg$FluxPlt[pstmrg$FluxPlt >  400] = 399.0
 
 r7 = diverge_hcl(7,h=c(240,0),c=80,l=c(50,100),power=0.3)
+flxlb2 = bquote(atop("Flux Increment", "gC" ~ "m" ^ -2 ~ "yr" ^-1))
 
 gmn = ggplot(pstmrg,aes(x=fk360,y=Latitude)) + geom_tile(aes(fill=FluxPlt)) + 
   geom_path(aes(x=fk360,y=Y,group=grp2chr), data=wrld, size=0.8, color="#444444") +
   facet_wrap(~ ANOVACmp) + 
-  scale_fill_gradientn("Flux",colors=r7,limits=c(-400,400)) + 
+  scale_fill_gradientn(flxlb2,colors=r7,limits=c(-400,400)) + 
   scale_x_continuous("",breaks=lnlb$fk360,labels=parse(text=lnlb$labxpr),limits=c(-110,110)) + 
   scale_y_continuous("",breaks=ltlb$origlat,labels=parse(text=ltlb$labxpr),limits=c(0,84)) + 
   ggtitle("CMS Flux ANOVA") + theme_mat + coord_equal()
@@ -120,7 +121,7 @@ for (k in seq(1,length(fctlbs)) ) {
   gbi = ggplot(pstmsb,aes(x=fk360,y=Latitude)) + geom_tile(aes(fill=FluxPlt)) + 
     geom_path(aes(x=fk360,y=Y,group=grp2chr), data=wrld, size=0.8, color="#444444") +
     facet_wrap(~ ANOVACmp,nrow=1) + 
-    scale_fill_gradientn("Flux",colors=r7,limits=c(lwlm[k],lmsq[k])) + 
+    scale_fill_gradientn(flxlb2,colors=r7,limits=c(lwlm[k],lmsq[k])) + 
     scale_x_continuous("",breaks=lnlb$fk360,labels=parse(text=lnlb$labxpr),limits=c(-110,110)) + 
     scale_y_continuous("",breaks=ltlb$origlat,labels=parse(text=ltlb$labxpr),limits=c(0,84)) + 
     theme_mat + coord_equal()
@@ -159,7 +160,7 @@ amrg$FluxPlt[amrg$FluxPlt >  400] = 399.0
 gseas = ggplot(amrg,aes(x=fk360,y=Latitude)) + geom_tile(aes(fill=FluxPlt)) + 
   geom_path(aes(x=fk360,y=Y,group=grp2chr), data=wrld, size=0.8, color="#444444") +
   facet_wrap(~ Year,nrow=2) + 
-  scale_fill_gradientn("Flux",colors=r7,limits=c(-400,400)) + 
+  scale_fill_gradientn(flxlb2,colors=r7,limits=c(-400,400)) + 
   scale_x_continuous("",breaks=lnlb$fk360,labels=parse(text=lnlb$labxpr),limits=c(-110,110)) + 
   scale_y_continuous("",breaks=ltlb$origlat,labels=parse(text=ltlb$labxpr),limits=c(0,84)) + 
   ggtitle("CMS Flux ANOVA Estimates") + theme_mat + coord_equal()
