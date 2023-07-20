@@ -13,9 +13,14 @@ The functional ANOVA methodology is based on [Kaufman and Sain (2010)](https://d
 
 Several examples of the functional ANOVA approach for carbon flux inversions are found in the `examples` directory
 
-* [CMS-Flux Eurasia](examples/cms_eurasia/README.md): CMS-Flux esimates over Eurasia for two years, using different aggregation methods
-* [MIP North America](examples/mip_namer/README.md): OCO-2 V9 flux model intercomparison project estimates over North America
-* [MIP Africa](examples/mip_africa/README.md): OCO-2 V9 flux model intercomparison project estimates over Africa
+* Examples with a spatio-temporal model for the functional ANOVA error term
+    - [CMS-Flux Eurasia](examples/cms_eurasia_sptm/README.md): CMS-Flux esimates over Eurasia for two years, using different aggregation methods
+    - [MIP North America](examples/mip_namer_sptm/README.md): OCO-2 V9 flux model intercomparison project estimates over North America
+    - [MIP Africa](examples/mip_africa_sptm/README.md): OCO-2 V9 flux model intercomparison project estimates over Africa
+* Examples for the spatial only functional ANOVA model
+    - [CMS-Flux Eurasia](examples/cms_eurasia/README.md): CMS-Flux esimates over Eurasia for two years, using different aggregation methods
+    - [MIP North America](examples/mip_namer/README.md): OCO-2 V9 flux model intercomparison project estimates over North America
+    - [MIP Africa](examples/mip_africa/README.md): OCO-2 V9 flux model intercomparison project estimates over Africa
 
 ***
 
@@ -24,37 +29,15 @@ Several examples of the functional ANOVA approach for carbon flux inversions are
 The functional ANOVA implementations are in R. Additional R packages required include 
 
 * `jsonlite`
-* `reshape2`
-* `plyr`
+* `tidyverse`
 * `ggplot2`
 * `colorspace`
 * `fields`
 * `ncdf4`
     - The system will also need NetCDF libraries installed
 * `rgdal`
-    - This library is only required if generating data files from the OCO-2 flux MIP, e.g. `mip_data_north_amer_gdal.R`
+    - This library is only required if generating data files from the OCO-2 flux MIP, e.g. `mip_data_north_amer_tidy.R`
     - The system will also need libgdal installed
-* `GPvecchia` (development build preferred)
-    - For a development build, all of the packages GPvecchia depends on are needed: `Rcpp`, `methods`, `stats`, `sparseinv`, `fields`, `Matrix`, `parallel`, `GpGp`, `FNN`, `markdown`, `RcppArmadillo`, `BH`
-    - Additional packages needed for building documentation `rmarkdown`, `knitr`, `mvtnorm`
-
-***
-
-### Development build of GPvecchia
-
-The spatial covariance routines use the [GPvecchia R package](https://github.com/katzfuss-group/GPvecchia)
-
-The internal matrix operations in the CRAN version of GPvecchia can sometimes cause the MCMC sampler to crash, but the development version of the package handles the errors without crashing. Therefore, it can be useful to build the package from the repository directly. Some general guidelines for the procedure can be found as part of the [R package tutorial](https://kbroman.org/pkg_primer/pages/build.html)
-
-The procedure to build from the repository on a remote Linux system is
-
-* Clone repository: `git clone https://github.com/katzfuss-group/GPvecchia.git`
-* Add `markdown` to the Imports list in DESCRIPTION
-* Create/add the following line to `.Renviron` file
-```
-R_LIBS_USER=/home/user/Rlibs
-```
-The `R_LIBS_USER` directory is the directory where the library will be installed. It does not need to be the same location as the cloned repository.
-* Build the package with `R CMD BUILD GPvecchia` or `R CMD build GPvecchia`
-* Install the package in local directory with `R CMD INSTALL GPvecchia_0.1.3.tar.gz`
+* `GPvecchia` (v0.1.4 or later preferred)
+    - For earlier versions, a [development build](GPvecchia_devbuild.md) is needed
 
