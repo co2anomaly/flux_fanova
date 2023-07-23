@@ -118,7 +118,7 @@ frmsb = prfnl %>% filter(Expt == expt[1])
 flxlb2 = bquote(atop("Flux", "gC" ~ "m" ^ -2 ~ "yr" ^-1))
 ttlstr = 'North America JJA 2016: Prior'
 gmn = ggplot(frmsb,aes(x=fk360,y=Latitude)) + geom_tile(aes(fill=FluxPlt)) + 
-  geom_path(aes(x=fk360,y=Y,group=grp2chr), data=wrld, size=0.8, color="#444444") +
+  geom_path(aes(x=fk360,y=Y,group=grp2chr), data=wrld, linewidth=0.8, color="#444444") +
   facet_grid(Time ~ Model) + 
   scale_fill_gradientn(flxlb2,colors=r7,limits=c(-2000,2000)) + 
   scale_x_continuous("",breaks=lnlb$fk360,labels=parse(text=lnlb$labxpr),limits=c(-80,40)) + 
@@ -149,7 +149,7 @@ for (i in seq(1,length(expt))) {
   frmsb = mipfnl %>% filter(Expt == expt[i]) 
   ttlstr = paste0('North America JJA 2016: ',expt[i])
   gmn = ggplot(frmsb,aes(x=fk360,y=Latitude)) + geom_tile(aes(fill=FluxPlt)) + 
-    geom_path(aes(x=fk360,y=Y,group=grp2chr), data=wrld, size=0.8, color="#444444") +
+    geom_path(aes(x=fk360,y=Y,group=grp2chr), data=wrld, linewidth=0.8, color="#444444") +
     facet_grid(Time ~ Model) + 
     scale_fill_gradientn(flxlb2,colors=r7,limits=c(-2000,2000)) + 
     scale_x_continuous("",breaks=lnlb$fk360,labels=parse(text=lnlb$labxpr),limits=c(-80,40)) + 
@@ -174,7 +174,7 @@ for (i in seq(1,length(expt))) {
   frmsb = mrgall[mrgall$Expt == expt[i],]  
   ttlstr = paste0('North America JJA 2016 Post-Prior: ',expt[i])
   gmn = ggplot(frmsb,aes(x=fk360,y=Latitude)) + geom_tile(aes(fill=FluxPlt)) + 
-    geom_path(aes(x=fk360,y=Y,group=grp2chr), data=wrld, size=0.8, color="#444444") +
+    geom_path(aes(x=fk360,y=Y,group=grp2chr), data=wrld, linewidth=0.8, color="#444444") +
     facet_grid(Time ~ Model) + 
     scale_fill_gradientn(flxlb2,colors=r7,limits=c(-2000,2000)) + 
     scale_x_continuous("",breaks=lnlb$fk360,labels=parse(text=lnlb$labxpr),limits=c(-80,40)) + 

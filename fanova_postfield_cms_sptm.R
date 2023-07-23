@@ -100,7 +100,7 @@ r7 = diverge_hcl(7,h=c(240,0),c=80,l=c(50,100),power=0.3)
 flxlb2 = bquote(atop("Flux Increment", "gC" ~ "m" ^ -2 ~ "yr" ^-1))
 
 gmn = ggplot(pstmrg,aes(x=fk360,y=Latitude)) + geom_tile(aes(fill=FluxPlt)) + 
-  geom_path(aes(x=fk360,y=Y,group=grp2chr), data=wrld, size=0.8, color="#444444") +
+  geom_path(aes(x=fk360,y=Y,group=grp2chr), data=wrld, linewidth=0.8, color="#444444") +
   facet_wrap(~ ANOVACmp) + 
   scale_fill_gradientn(flxlb2,colors=r7,limits=c(-400,400)) + 
   scale_x_continuous("",breaks=lnlb$fk360,labels=parse(text=lnlb$labxpr),limits=c(-110,110)) + 
@@ -119,7 +119,7 @@ for (k in seq(1,length(fctlbs)) ) {
   pstmsb$ANOVACmp = factor(pstmsb$ANOVACmp)
   print(summary(pstmsb$FluxPlt))
   gbi = ggplot(pstmsb,aes(x=fk360,y=Latitude)) + geom_tile(aes(fill=FluxPlt)) + 
-    geom_path(aes(x=fk360,y=Y,group=grp2chr), data=wrld, size=0.8, color="#444444") +
+    geom_path(aes(x=fk360,y=Y,group=grp2chr), data=wrld, linewidth=0.8, color="#444444") +
     facet_wrap(~ ANOVACmp,nrow=1) + 
     scale_fill_gradientn(flxlb2,colors=r7,limits=c(lwlm[k],lmsq[k])) + 
     scale_x_continuous("",breaks=lnlb$fk360,labels=parse(text=lnlb$labxpr),limits=c(-110,110)) + 
@@ -158,7 +158,7 @@ amrg$FluxPlt[amrg$FluxPlt < -400] = -399.0
 amrg$FluxPlt[amrg$FluxPlt >  400] = 399.0
 
 gseas = ggplot(amrg,aes(x=fk360,y=Latitude)) + geom_tile(aes(fill=FluxPlt)) + 
-  geom_path(aes(x=fk360,y=Y,group=grp2chr), data=wrld, size=0.8, color="#444444") +
+  geom_path(aes(x=fk360,y=Y,group=grp2chr), data=wrld, linewidth=0.8, color="#444444") +
   facet_wrap(~ Year,nrow=2) + 
   scale_fill_gradientn(flxlb2,colors=r7,limits=c(-400,400)) + 
   scale_x_continuous("",breaks=lnlb$fk360,labels=parse(text=lnlb$labxpr),limits=c(-110,110)) + 
@@ -186,7 +186,7 @@ prbmrg = prbmlt %>% left_join(lcfrm, by="LocID")
 prbmrg = fklon_tbl(prbmrg,lonvar = "Longitude",center=90)
 
 gbmn = ggplot(prbmrg,aes(x=fk360,y=Latitude)) + geom_tile(aes(fill=PstMnPrb)) + 
-  geom_path(aes(x=fk360,y=Y,group=grp2chr), data=wrld, size=0.8, color="#444444") +
+  geom_path(aes(x=fk360,y=Y,group=grp2chr), data=wrld, linewidth=0.8, color="#444444") +
   scale_fill_continuous("Prob", type="viridis", limits=c(0.9,1.0)) + 
   scale_x_continuous("",breaks=lnlb$fk360,labels=parse(text=lnlb$labxpr),limits=c(-110,110)) + 
   scale_y_continuous("",breaks=ltlb$origlat,labels=parse(text=ltlb$labxpr),limits=c(0,84)) + 
@@ -197,7 +197,7 @@ print(gbmn)
 dev.off()
 
 gbyr = ggplot(prbmrg,aes(x=fk360,y=Latitude)) + geom_tile(aes(fill=PstYrPrb)) + 
-  geom_path(aes(x=fk360,y=Y,group=grp2chr), data=wrld, size=0.8, color="#444444") +
+  geom_path(aes(x=fk360,y=Y,group=grp2chr), data=wrld, linewidth=0.8, color="#444444") +
   scale_fill_continuous("Prob", type="viridis", limits=c(0.55,0.65)) + 
   scale_x_continuous("",breaks=lnlb$fk360,labels=parse(text=lnlb$labxpr),limits=c(-110,110)) + 
   scale_y_continuous("",breaks=ltlb$origlat,labels=parse(text=ltlb$labxpr),limits=c(0,84)) + 
