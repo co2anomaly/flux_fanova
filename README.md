@@ -40,4 +40,6 @@ The functional ANOVA implementations are in R. Additional R packages required in
     - The system will also need libgdal installed
 * `GPvecchia` (v0.1.4 or later preferred)
     - For earlier versions, a [development build](GPvecchia_devbuild.md) is needed
+* `scales`
+    - This library is only required for prior distribution visualizations
 
